@@ -175,9 +175,8 @@ function App() {
 
   const renderBalanceCard = (compact = false) => (
     <div
-      className={`rounded-2xl bg-gradient-to-br from-[#153c2a] to-[#245b3b] text-white ${
-        compact ? "p-6" : "p-6 sm:p-8"
-      }`}
+      className={`rounded-2xl bg-gradient-to-br from-[#153c2a] to-[#245b3b] text-white ${compact ? "p-6" : "p-6 sm:p-8"
+        }`}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm text-[#c6dace]">
@@ -264,11 +263,10 @@ function App() {
               Example 24h change
             </span>
             <span
-              className={`rounded-md px-2 py-1 text-xs font-semibold ${
-                coin.positive
+              className={`rounded-md px-2 py-1 text-xs font-semibold ${coin.positive
                   ? "bg-emerald-50 text-emerald-700"
                   : "bg-red-50 text-red-600"
-              }`}
+                }`}
             >
               {coin.change}
             </span>
@@ -286,11 +284,10 @@ function App() {
             <button
               key={type}
               onClick={() => setTradeType(type)}
-              className={`rounded-lg py-3 text-sm font-semibold capitalize transition ${
-                tradeType === type
+              className={`rounded-lg py-3 text-sm font-semibold capitalize transition ${tradeType === type
                   ? "bg-[#153c2a] text-white shadow-sm"
                   : "text-[#829087] hover:text-[#17251e]"
-              }`}
+                }`}
             >
               {type === "buy" ? "Buy Crypto" : "Sell Crypto"}
             </button>
@@ -350,8 +347,8 @@ function App() {
             <span className="text-right text-base font-bold">
               {numericAmount > 0
                 ? `${estimatedCoin.toLocaleString("en-US", {
-                    maximumSignificantDigits: 8,
-                  })} ${selectedCoin}`
+                  maximumSignificantDigits: 8,
+                })} ${selectedCoin}`
                 : `0 ${selectedCoin}`}
             </span>
           </div>
@@ -681,21 +678,19 @@ function App() {
 
               <div className="text-right">
                 <p
-                  className={`text-sm font-bold ${
-                    transaction.amount > 0
+                  className={`text-sm font-bold ${transaction.amount > 0
                       ? "text-emerald-700"
                       : "text-[#23372b]"
-                  }`}
+                    }`}
                 >
                   {transaction.amount > 0 ? "+" : "−"}
                   {formatNaira(Math.abs(transaction.amount)).slice(1)}
                 </p>
                 <span
-                  className={`mt-1 inline-block rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-                    transaction.status === "Completed"
+                  className={`mt-1 inline-block rounded-full px-2.5 py-1 text-[10px] font-semibold ${transaction.status === "Completed"
                       ? "bg-emerald-50 text-emerald-700"
                       : "bg-amber-50 text-amber-700"
-                  }`}
+                    }`}
                 >
                   {transaction.status}
                 </span>
@@ -739,11 +734,10 @@ function App() {
             <button
               key={label}
               onClick={() => setSettingsTab(label)}
-              className={`flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium transition ${
-                settingsTab === label
+              className={`flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium transition ${settingsTab === label
                   ? "bg-[#edf8ef] text-[#245b3b]"
                   : "text-[#64786a] hover:bg-gray-50"
-              }`}
+                }`}
             >
               <Icon size={19} />
               {label}
@@ -1008,9 +1002,8 @@ function App() {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[250px] flex-col bg-[#102b20] px-5 py-7 text-white transition-transform duration-300 ${
-          menuOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-[250px] flex-col bg-[#102b20] px-5 py-7 text-white transition-transform duration-300 ${menuOpen ? "translate-x-0" : "-translate-x-full"
+          } lg:translate-x-0`}
       >
         <div className="mb-10 flex items-center gap-3 px-2">
           <CircleDollarSign size={28} className="text-[#a4f2b7]" />
@@ -1036,11 +1029,10 @@ function App() {
             <button
               key={label}
               onClick={() => goTo(label)}
-              className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition ${
-                activePage === label
+              className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition ${activePage === label
                   ? "bg-[#a4f2b7] font-semibold text-[#102b20]"
                   : "text-[#c0d0c5] hover:bg-white/10 hover:text-white"
-              }`}
+                }`}
             >
               <Icon size={19} />
               <span>{label}</span>
