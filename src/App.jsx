@@ -542,6 +542,7 @@ function App() {
       </div>
 
       {renderBalanceCard()}
+      
 
       <div className="mt-9">
         <div className="mb-5">
