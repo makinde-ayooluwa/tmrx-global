@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   LayoutDashboard,
@@ -32,7 +31,7 @@ import {
   Copy,
   LogOut,
 } from "lucide-react";
-
+import Logo from "./assets/tmrx-global-3.png"
 const navigation = [
   { label: "Dashboard", icon: LayoutDashboard },
   { label: "Buy / Sell", icon: ArrowLeftRight },
@@ -1015,9 +1014,10 @@ function App() {
       >
         <div className="mb-10 flex items-center gap-3 px-2">
           <CircleDollarSign size={28} className="text-[#a4f2b7]" />
-          <span className="text-xl font-bold tracking-tight">
+          {/* <span className="text-xl font-bold tracking-tight">
             Coin<span className="text-[#a4f2b7]">Trade</span>
-          </span>
+          </span> */}
+          <img src={Logo} alt="" className="w-[90px]" />
           <button
             onClick={() => setMenuOpen(false)}
             className="ml-auto rounded-lg p-2 hover:bg-white/10 lg:hidden"
