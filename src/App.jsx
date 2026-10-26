@@ -444,7 +444,7 @@ function App() {
       <div className="relative mb-7 flex min-h-[220px] items-center justify-between gap-5 overflow-hidden rounded-2xl bg-gradient-to-br from-[#153c2a] to-[#245b3b] p-6 text-white sm:p-9">
         <div className="relative z-10 max-w-xl">
           <p className="text-[10px] font-bold tracking-[2px] text-[#a4f2b7]">
-            WELCOME TO COIN TRADE
+            WELCOME TO TMRX GLOBAL
           </p>
 
           <h2 className="mt-4 text-2xl font-bold leading-tight sm:text-4xl">
@@ -542,7 +542,7 @@ function App() {
       </div>
 
       {renderBalanceCard()}
-      
+
 
       <div className="mt-9">
         <div className="mb-5">
@@ -1116,7 +1116,7 @@ function App() {
         {activePage === "Order Preview" && renderOrderPreview()}
 
         <footer className="px-4 pb-8 text-center text-xs text-[#98a39b]">
-          Coin Trade · Demo interface · Not connected to real funds
+          TMRX Global · Demo interface · Not connected to real funds
         </footer>
       </main>
 
