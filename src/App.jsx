@@ -273,7 +273,6 @@ function App() {
   const [transactionFilter, setTransactionFilter] = useState("All");
   const [transactionSearch, setTransactionSearch] = useState("");
   const [settingsTab, setSettingsTab] = useState("Profile");
-  const [profile, setProfile] = useState({ ...userData });
   const [auth, setAuth] = useState("");
   const [notifications, setNotifications] = useState({
     transactions: true,
@@ -967,10 +966,10 @@ function App() {
                     Full name
                   </label>
                   <input
-                    value={profile.fullName}
-                    onChange={(event) =>
-                      setProfile({ ...profile, fullName: event.target.value })
-                    }
+                    value={userData.fullname}
+                    // onChange={(event) =>
+                    //   setProfile({ ...userData, fullname: event.target.value })
+                    // }
                     placeholder="Enter your full name"
                     className="w-full rounded-xl border border-[#dfe7e1] px-4 py-3.5 text-sm outline-none focus:border-[#34834e]"
                   />
@@ -982,10 +981,10 @@ function App() {
                   </label>
                   <input
                     type="email"
-                    value={profile.email}
-                    onChange={(event) =>
-                      setProfile({ ...profile, email: event.target.value })
-                    }
+                    value={userData.email}
+                    // onChange={(event) =>
+                    //   setProfile({ ...userData, email: event.target.value })
+                    // }
                     placeholder="you@example.com"
                     className="w-full rounded-xl border border-[#dfe7e1] px-4 py-3.5 text-sm outline-none focus:border-[#34834e]"
                   />
@@ -997,10 +996,10 @@ function App() {
                   </label>
                   <input
                     type="tel"
-                    value={profile.phone}
-                    onChange={(event) =>
-                      setProfile({ ...profile, phone: event.target.value })
-                    }
+                    value={userData.phone}
+                    // onChange={(event) =>
+                    //   setProfile({ ...profile, phone: event.target.value })
+                    // }
                     placeholder="Enter phone number"
                     className="w-full rounded-xl border border-[#dfe7e1] px-4 py-3.5 text-sm outline-none focus:border-[#34834e]"
                   />
