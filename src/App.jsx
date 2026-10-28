@@ -30,8 +30,16 @@ import {
   AlertCircle,
   Copy,
   LogOut,
+  LogIn,
+  Mail,
+  Key,
+  Phone,
 } from "lucide-react";
 import Logo from "./assets/tmrx-global-3.png"
+import { useUser } from "./contexts/userProvider"
+import { backendUrl } from "./constants/backendUrl";
+import Swal from "sweetalert2"
+import { BsPerson } from "react-icons/bs";
 const navigation = [
   { label: "Dashboard", icon: LayoutDashboard },
   { label: "Buy / Sell", icon: ArrowLeftRight },
@@ -41,7 +49,7 @@ const navigation = [
 ];
 
 const coinRates = {
-  USDT: 1520,
+  USDT: 1330 + 100,
   BTC: 168450000,
   ETH: 6250000,
 };
@@ -110,23 +118,163 @@ const formatNaira = (amount) =>
   })}`;
 
 function App() {
+  // Contexts
+  const { user, userData, register, login } = useUser();
+
+  // Authentication dialog state
+  const [registerData, setRegisterData] = useState({
+    fullname: "",
+    email: "",
+    phone: "",
+    password: "",
+  });
+  const [loginData, setLoginData] = useState({ email: "", password: "" });
+  const [authEmail, setAuthEmail] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [authSuccess, setAuthSuccess] = useState("");
+
+  const switchAuth = (next) => {
+    setAuth(next);
+    setAuthError("");
+    setAuthSuccess("");
+  };
+
+  const closeAuth = () => {
+    setAuth("");
+    setAuthError("");
+    setAuthSuccess("");
+    setAuthLoading(false);
+  };
+
+  const requestAuth = async (path, payload) => {
+    const response = await fetch(`${backendUrl}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.status === false) {
+      throw new Error(data.message || data.error || "Request failed. Please try again.");
+    }
+    return data;
+  };
+
+  const handleAuthSubmit = async (event) => {
+    event.preventDefault();
+    setAuthError("");
+    setAuthSuccess("");
+    setAuthLoading(true);
+
+    try {
+      if (auth === "Login") {
+        const data = await login({
+          email: loginData.email.trim().toLowerCase(),
+          password: loginData.password,
+        });
+        if (!data || data.status === false) {
+          throw new Error(data?.message || "Unable to log in. Please check your details.");
+        }
+        closeAuth();
+        await Swal.fire({
+          title: "Welcome back",
+          text: data.message || "Login successful.",
+          icon: "success",
+        });
+      } else if (auth === "Register") {
+        const data = await register({
+          ...registerData,
+          fullname: registerData.fullname.trim(),
+          email: registerData.email.trim().toLowerCase(),
+          phone: registerData.phone.trim(),
+        });
+        if (!data || data.status === false) {
+          throw new Error(data?.message || "Unable to create your account.");
+        }
+        setAuthEmail(registerData.email.trim().toLowerCase());
+        setResetCode("");
+        setAuthSuccess(data.message || "If registration was accepted, check your email for the verification code.");
+        setAuth("Verify Email");
+      } else if (auth === "Forgot Password") {
+        const email = authEmail.trim().toLowerCase();
+        await requestAuth("/auth/forgot-password", { email });
+        setAuthEmail(email);
+        setAuthSuccess("If an account exists for this email, a verification code has been sent.");
+        setAuth("Verify Reset Code");
+      } else if (auth === "Verify Email") {
+        const data = await requestAuth("/auth/verify-email", {
+          email: authEmail.trim().toLowerCase(),
+          code: resetCode.trim(),
+        });
+        setAuthSuccess(data.message || "Email verified successfully. You can now log in.");
+        setResetCode("");
+        setAuth("Login");
+      } else if (auth === "Verify Reset Code") {
+        const data = await requestAuth("/auth/verify-reset-code", {
+          email: authEmail.trim().toLowerCase(),
+          code: resetCode.trim(),
+        });
+        if (!data.resetToken) throw new Error("The server did not return a reset token.");
+        setResetToken(data.resetToken);
+        setAuth("Reset Password");
+      } else if (auth === "Reset Password") {
+        if (newPassword.length < 8) throw new Error("Your new password must contain at least 8 characters.");
+        if (newPassword !== confirmPassword) throw new Error("The passwords do not match.");
+        const data = await requestAuth("/auth/reset-password", {
+          email: authEmail.trim().toLowerCase(),
+          resetToken,
+          password: newPassword,
+        });
+        setAuthSuccess(data.message || "Password reset successfully. You can now log in.");
+        setLoginData((current) => ({ ...current, email: authEmail, password: "" }));
+        setNewPassword("");
+        setConfirmPassword("");
+        setResetCode("");
+        setResetToken("");
+        setAuth("Login");
+      }
+    } catch (error) {
+      setAuthError(error.message || "Something went wrong. Please try again.");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setAuthError("");
+    setAuthSuccess("");
+    setAuthLoading(true);
+    try {
+      const path = auth === "Verify Email" ? "/auth/resend-verification-code" : "/auth/forgot-password";
+      await requestAuth(path, { email: authEmail.trim().toLowerCase() });
+      setAuthSuccess("If the email is eligible, a new code has been sent.");
+    } catch (error) {
+      setAuthError(error.message || "Unable to resend the code.");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  // States
   const [activePage, setActivePage] = useState("Dashboard");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [balanceVisible, setBalanceVisible] = useState(true);
+  const [balanceVisible, setBalanceVisible] = useState(false);
   const [tradeType, setTradeType] = useState("buy");
   const [selectedCoin, setSelectedCoin] = useState("USDT");
-  const [tradeAmount, setTradeAmount] = useState("10000");
+  const [tradeAmount, setTradeAmount] = useState(0);
   const [walletAction, setWalletAction] = useState("");
   const [actionAmount, setActionAmount] = useState("");
   const [actionMessage, setActionMessage] = useState("");
   const [transactionFilter, setTransactionFilter] = useState("All");
   const [transactionSearch, setTransactionSearch] = useState("");
   const [settingsTab, setSettingsTab] = useState("Profile");
-  const [profile, setProfile] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
-  });
+  const [profile, setProfile] = useState({ ...userData });
+  const [auth, setAuth] = useState("");
   const [notifications, setNotifications] = useState({
     transactions: true,
     security: true,
@@ -136,11 +284,12 @@ function App() {
     twoFactor: false,
   });
 
-  const numericAmount = Number(tradeAmount) || 0;
-  const estimatedCoin = numericAmount / coinRates[selectedCoin];
 
-  const pageClass =
-    "mx-auto max-w-[1400px] px-4 py-7 sm:px-7 sm:py-9 lg:px-9";
+
+  const coinAmount = Number(tradeAmount) || 0;
+  const estimatedAmount = coinRates[selectedCoin] * coinAmount;
+
+  const pageClass = "mx-auto max-w-[1400px] px-4 py-7 sm:px-7 sm:py-9 lg:px-9";
 
   const goTo = (page) => {
     setActivePage(page);
@@ -182,13 +331,13 @@ function App() {
         <div className="flex items-center gap-2 text-sm text-[#c6dace]">
           <Wallet size={19} />
           Available NGN balance
-          <button
+          {user !== null && <button
             onClick={() => setBalanceVisible(!balanceVisible)}
             className="rounded-lg p-1 hover:bg-white/10"
             aria-label={balanceVisible ? "Hide balance" : "Show balance"}
           >
             {balanceVisible ? <Eye size={17} /> : <EyeOff size={17} />}
-          </button>
+          </button>}
         </div>
 
         <span className="rounded-full bg-white/10 px-3 py-1 text-xs">
@@ -196,15 +345,20 @@ function App() {
         </span>
       </div>
 
-      <h2 className="mt-6 text-3xl font-bold tracking-tight sm:text-4xl">
-        {balanceVisible ? "₦0.00" : "••••••"}
-      </h2>
+      {user !== null &&
+        <h2 className="mt-6 text-3xl font-bold tracking-tight sm:text-4xl">
+          {balanceVisible ? "₦0.00" : "••••••"}
+        </h2>
+      }
+      {user == null &&
+        <h2 className="mt-6 text-2xl font-bold tracking-tight sm:text-4xl">Login to view balance</h2>
+      }
 
       <p className="mt-2 text-xs text-[#c6dace]">
         Demo balance — not connected to a real account
       </p>
 
-      <div className="mt-7 flex flex-wrap gap-3">
+      {user !== null && <div className="mt-7 flex flex-wrap gap-3">
         <button
           onClick={() => openWalletAction("Add Funds")}
           className="inline-flex items-center gap-2 rounded-xl bg-[#a4f2b7] px-5 py-3 text-sm font-bold text-[#102b20] transition hover:bg-[#c0f8cd]"
@@ -220,7 +374,7 @@ function App() {
           <ArrowUpRight size={17} />
           Withdraw
         </button>
-      </div>
+      </div>}
     </div>
   );
 
@@ -264,8 +418,8 @@ function App() {
             </span>
             <span
               className={`rounded-md px-2 py-1 text-xs font-semibold ${coin.positive
-                  ? "bg-emerald-50 text-emerald-700"
-                  : "bg-red-50 text-red-600"
+                ? "bg-emerald-50 text-emerald-700"
+                : "bg-red-50 text-red-600"
                 }`}
             >
               {coin.change}
@@ -285,8 +439,8 @@ function App() {
               key={type}
               onClick={() => setTradeType(type)}
               className={`rounded-lg py-3 text-sm font-semibold capitalize transition ${tradeType === type
-                  ? "bg-[#153c2a] text-white shadow-sm"
-                  : "text-[#829087] hover:text-[#17251e]"
+                ? "bg-[#153c2a] text-white shadow-sm"
+                : "text-[#829087] hover:text-[#17251e]"
                 }`}
             >
               {type === "buy" ? "Buy Crypto" : "Sell Crypto"}
@@ -319,13 +473,13 @@ function App() {
             htmlFor="trade-amount"
             className="mb-2 block text-sm font-semibold"
           >
-            Naira amount
+            Trade amount
           </label>
 
           <div className="flex items-center rounded-xl border border-[#dfe7e1] focus-within:border-[#34834e]">
-            <span className="pl-4 text-sm font-semibold text-[#64786a]">
-              NGN ₦
-            </span>
+            {/* <span className="pl-4 text-sm font-semibold text-[#64786a]">
+              NGN
+            </span> */}
             <input
               id="trade-amount"
               type="number"
@@ -342,19 +496,30 @@ function App() {
         <div className="mt-5 rounded-xl bg-[#f5f9f5] p-4">
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm text-[#64786a]">
-              Estimated {tradeType === "buy" ? "crypto received" : "crypto value"}
+              Estimated {tradeType === "buy" ? "naira amount to send" : "naira amount to receive"}
             </span>
             <span className="text-right text-base font-bold">
-              {numericAmount > 0
-                ? `${estimatedCoin.toLocaleString("en-US", {
+              {coinAmount > 0
+                ? `${estimatedAmount.toLocaleString("en-US", {
+                  maximumSignificantDigits: 8,
+                })} NGN`
+                : `0 NGN`}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm text-[#64786a]">
+              Estimated {tradeType === "buy" ? "crypto to receive" : "crypto to send"}
+            </span>
+            <span className="text-right text-base font-bold">
+              {coinAmount > 0
+                ? `${coinAmount.toLocaleString("en-US", {
                   maximumSignificantDigits: 8,
                 })} ${selectedCoin}`
                 : `0 ${selectedCoin}`}
             </span>
           </div>
-
           <div className="mt-3 flex items-center justify-between border-t border-[#e1ebe2] pt-3 text-xs text-[#829087]">
-            <span>Illustrative rate</span>
+            <span>Crypto rate</span>
             <span>
               ₦{coinRates[selectedCoin].toLocaleString("en-NG")} /{" "}
               {selectedCoin}
@@ -363,8 +528,19 @@ function App() {
         </div>
 
         <button
-          onClick={() => goTo("Order Preview")}
-          disabled={!Number.isFinite(numericAmount) || numericAmount <= 0}
+          onClick={() => {
+            if (user == null) {
+              Swal.fire({
+                title: "",
+                text: "Login to place an order",
+                icon: "info"
+              })
+            } else {
+              goTo("Order Preview")
+            }
+
+          }}
+          disabled={!Number.isFinite(coinAmount) || coinAmount <= 0}
           className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#153c2a] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#245b3b] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <ArrowLeftRight size={18} />
@@ -565,22 +741,42 @@ function App() {
           </div>
         </div>
 
-        <div className="mt-6 flex flex-col items-center py-8 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#edf8ef] text-[#34834e]">
-            <Clock3 size={23} />
+        {user !== null &&
+          <div className="mt-6 flex flex-col items-center py-8 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#edf8ef] text-[#34834e]">
+              <Clock3 size={23} />
+            </div>
+            <h3 className="mt-4 text-sm font-bold">No real activity yet</h3>
+            <p className="mt-2 max-w-sm text-sm leading-6 text-[#829087]">
+              Real deposits, withdrawals, and trades will appear here after the
+              wallet backend is connected.
+            </p>
+            <button
+              onClick={() => goTo("Transactions")}
+              className="mt-5 text-sm font-semibold text-[#34834e] hover:underline"
+            >
+              View transaction history
+            </button>
           </div>
-          <h3 className="mt-4 text-sm font-bold">No real activity yet</h3>
-          <p className="mt-2 max-w-sm text-sm leading-6 text-[#829087]">
-            Real deposits, withdrawals, and trades will appear here after the
-            wallet backend is connected.
-          </p>
-          <button
-            onClick={() => goTo("Transactions")}
-            className="mt-5 text-sm font-semibold text-[#34834e] hover:underline"
-          >
-            View transaction history
-          </button>
-        </div>
+        }
+        {
+          user == null &&
+          <div className="mt-6 flex flex-col items-center py-8 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#edf8ef] text-[#34834e]">
+              <Info size={23} />
+            </div>
+            <h3 className="mt-4 text-sm font-bold">Access restricted</h3>
+            <p className="mt-2 max-w-sm text-sm leading-6 text-[#829087]">
+              Login to view recent activities
+            </p>
+            <button
+              onClick={() => setAuth("Login")}
+              className="mt-5 text-sm font-semibold text-[#34834e] hover:underline"
+            >
+              Login
+            </button>
+          </div>
+        }
       </div>
     </section>
   );
@@ -680,8 +876,8 @@ function App() {
               <div className="text-right">
                 <p
                   className={`text-sm font-bold ${transaction.amount > 0
-                      ? "text-emerald-700"
-                      : "text-[#23372b]"
+                    ? "text-emerald-700"
+                    : "text-[#23372b]"
                     }`}
                 >
                   {transaction.amount > 0 ? "+" : "−"}
@@ -689,8 +885,8 @@ function App() {
                 </p>
                 <span
                   className={`mt-1 inline-block rounded-full px-2.5 py-1 text-[10px] font-semibold ${transaction.status === "Completed"
-                      ? "bg-emerald-50 text-emerald-700"
-                      : "bg-amber-50 text-amber-700"
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-amber-50 text-amber-700"
                     }`}
                 >
                   {transaction.status}
@@ -736,8 +932,8 @@ function App() {
               key={label}
               onClick={() => setSettingsTab(label)}
               className={`flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium transition ${settingsTab === label
-                  ? "bg-[#edf8ef] text-[#245b3b]"
-                  : "text-[#64786a] hover:bg-gray-50"
+                ? "bg-[#edf8ef] text-[#245b3b]"
+                : "text-[#64786a] hover:bg-gray-50"
                 }`}
             >
               <Icon size={19} />
@@ -951,8 +1147,8 @@ function App() {
             </p>
             <p className="mt-2 text-2xl font-bold">{selectedCoin}</p>
             <p className="mt-1 text-sm text-[#64786a]">
-              Estimated amount:{" "}
-              {estimatedCoin.toLocaleString("en-US", {
+              Coin amount:{" "}
+              {coinAmount.toLocaleString("en-US", {
                 maximumSignificantDigits: 8,
               })}{" "}
               {selectedCoin}
@@ -965,8 +1161,8 @@ function App() {
               <span className="font-semibold capitalize">{tradeType}</span>
             </div>
             <div className="flex justify-between gap-4 text-sm">
-              <span className="text-[#829087]">Naira amount</span>
-              <span className="font-semibold">{formatNaira(numericAmount)}</span>
+              <span className="text-[#829087]">Estimated Naira amount</span>
+              <span className="font-semibold">{formatNaira(estimatedAmount)}</span>
             </div>
             <div className="flex justify-between gap-4 text-sm">
               <span className="text-[#829087]">Illustrative rate</span>
@@ -1031,8 +1227,8 @@ function App() {
               key={label}
               onClick={() => goTo(label)}
               className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition ${activePage === label
-                  ? "bg-[#a4f2b7] font-semibold text-[#102b20]"
-                  : "text-[#c0d0c5] hover:bg-white/10 hover:text-white"
+                ? "bg-[#a4f2b7] font-semibold text-[#102b20]"
+                : "text-[#c0d0c5] hover:bg-white/10 hover:text-white"
                 }`}
             >
               <Icon size={19} />
@@ -1074,24 +1270,40 @@ function App() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              onClick={() => goTo("Transactions")}
-              className="relative rounded-xl border border-[#e6ece7] p-2.5 hover:bg-gray-50"
-              aria-label="View transaction updates"
-            >
-              <Bell size={19} />
-              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#42b96a]" />
-            </button>
-            <button
-              onClick={() => {
-                setSettingsTab("Profile");
-                goTo("Settings");
-              }}
-              className="flex items-center gap-2 rounded-xl border border-[#e6ece7] px-3 py-2.5 text-sm hover:bg-gray-50"
-            >
-              <UserRound size={18} />
-              <span className="hidden sm:inline">Account</span>
-            </button>
+            {user == null &&
+              <>
+                <button
+                  onClick={() => setAuth("Login")}
+                  className="relative rounded-xl border border-[#e6ece7] p-2.5 hover:bg-gray-50"
+                  aria-label="Login"
+                >
+                  {/* <LogIn size={19} /> */}
+                  Login
+                </button>
+              </>
+            }
+            {user !== null &&
+              <>
+                <button
+                  onClick={() => goTo("Transactions")}
+                  className="relative rounded-xl border border-[#e6ece7] p-2.5 hover:bg-gray-50"
+                  aria-label="View transaction updates"
+                >
+                  <Bell size={19} />
+                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#42b96a]" />
+                </button>
+                <button
+                  onClick={() => {
+                    setSettingsTab("Profile");
+                    goTo("Settings");
+                  }}
+                  className="flex items-center gap-2 rounded-xl border border-[#e6ece7] px-3 py-2.5 text-sm hover:bg-gray-50"
+                >
+                  <UserRound size={18} />
+                  <span className="hidden sm:inline">Account</span>
+                </button>
+              </>
+            }
           </div>
         </header>
 
@@ -1119,7 +1331,68 @@ function App() {
           TMRX Global · Demo interface · Not connected to real funds
         </footer>
       </main>
+      {/* Authentication dialogs */}
+      {auth !== "" && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/55 p-4 backdrop-blur-sm">
+          <div className="my-auto w-full max-w-md rounded-2xl border border-[#e7ece8] bg-white p-6 shadow-2xl sm:p-7">
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div>
+                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[#edf8ef] text-[#34834e]">
+                  {auth.includes("Password") ? <Key size={21} /> : auth.includes("Verify") ? <ShieldCheck size={21} /> : auth === "Register" ? <UserRound size={21} /> : <LogIn size={21} />}
+                </div>
+                <h2 className="text-xl font-bold text-[#17251e]">
+                  {auth === "Login" ? "Welcome back" : auth === "Register" ? "Create your account" : auth === "Forgot Password" ? "Forgot password?" : auth === "Verify Email" ? "Verify your email" : auth === "Verify Reset Code" ? "Verify reset code" : "Create a new password"}
+                </h2>
+                <p className="mt-1 text-sm leading-5 text-[#829087]">
+                  {auth === "Login" ? "Sign in to continue to TMRX Global." : auth === "Register" ? "Enter your details to get started." : auth === "Forgot Password" ? "We'll email you a code if an account matches." : auth === "Verify Email" ? `Enter the code sent to ${authEmail}.` : auth === "Verify Reset Code" ? `Enter the password-reset code sent to ${authEmail}.` : "Choose a strong password you have not used before."}
+                </p>
+              </div>
+              <button type="button" onClick={closeAuth} className="rounded-lg p-2 text-[#64786a] hover:bg-gray-100" aria-label="Close dialog"><X size={20} /></button>
+            </div>
 
+            {authError && <div role="alert" className="mb-4 flex gap-2 rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-700"><AlertCircle size={18} className="mt-0.5 shrink-0" /><span>{authError}</span></div>}
+            {authSuccess && <div role="status" className="mb-4 flex gap-2 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-800"><CheckCircle2 size={18} className="mt-0.5 shrink-0" /><span>{authSuccess}</span></div>}
+
+            <form onSubmit={handleAuthSubmit} className="space-y-4">
+              {auth === "Login" && <>
+                <div><label htmlFor="login-email" className="mb-2 block text-sm font-semibold">Email address</label><div className="flex items-center rounded-xl border border-[#dfe7e1] px-4 focus-within:border-[#34834e]"><Mail size={18} className="shrink-0 text-[#64786a]" /><input id="login-email" type="email" autoComplete="email" value={loginData.email} onChange={(e) => setLoginData({ ...loginData, email: e.target.value })} placeholder="you@example.com" className="w-full px-3 py-3.5 text-sm outline-none" required /></div></div>
+                <div><label htmlFor="login-password" className="mb-2 block text-sm font-semibold">Password</label><div className="flex items-center rounded-xl border border-[#dfe7e1] px-4 focus-within:border-[#34834e]"><Key size={18} className="shrink-0 text-[#64786a]" /><input id="login-password" type="password" autoComplete="current-password" value={loginData.password} onChange={(e) => setLoginData({ ...loginData, password: e.target.value })} placeholder="Enter your password" className="w-full px-3 py-3.5 text-sm outline-none" required /></div></div>
+                <div className="flex justify-end"><button type="button" onClick={() => { setAuthEmail(loginData.email); switchAuth("Forgot Password"); }} className="text-sm font-semibold text-[#34834e] hover:underline">Forgot password?</button></div>
+                <button type="submit" disabled={authLoading} className="w-full rounded-xl bg-[#153c2a] px-4 py-3.5 text-sm font-bold text-white hover:bg-[#245b3b] disabled:cursor-not-allowed disabled:opacity-60">{authLoading ? "Please wait…" : "Login"}</button>
+                <p className="text-center text-sm text-[#64786a]">New to TMRX Global? <button type="button" onClick={() => switchAuth("Register")} className="font-bold text-[#34834e] hover:underline">Create an account</button></p>
+              </>}
+
+              {auth === "Register" && <>
+                <div><label htmlFor="register-fullname" className="mb-2 block text-sm font-semibold">Full name</label><div className="flex items-center rounded-xl border border-[#dfe7e1] px-4 focus-within:border-[#34834e]"><UserRound size={18} className="shrink-0 text-[#64786a]" /><input id="register-fullname" autoComplete="name" value={registerData.fullname} onChange={(e) => setRegisterData({ ...registerData, fullname: e.target.value })} placeholder="Your full name" className="w-full px-3 py-3.5 text-sm outline-none" required /></div></div>
+                <div><label htmlFor="register-email" className="mb-2 block text-sm font-semibold">Email address</label><div className="flex items-center rounded-xl border border-[#dfe7e1] px-4 focus-within:border-[#34834e]"><Mail size={18} className="shrink-0 text-[#64786a]" /><input id="register-email" type="email" autoComplete="email" value={registerData.email} onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })} placeholder="you@example.com" className="w-full px-3 py-3.5 text-sm outline-none" required /></div></div>
+                <div><label htmlFor="register-phone" className="mb-2 block text-sm font-semibold">Phone number</label><div className="flex items-center rounded-xl border border-[#dfe7e1] px-4 focus-within:border-[#34834e]"><Phone size={18} className="shrink-0 text-[#64786a]" /><input id="register-phone" type="tel" autoComplete="tel" value={registerData.phone} onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })} placeholder="Phone number" className="w-full px-3 py-3.5 text-sm outline-none" required /></div></div>
+                <div><label htmlFor="register-password" className="mb-2 block text-sm font-semibold">Password</label><div className="flex items-center rounded-xl border border-[#dfe7e1] px-4 focus-within:border-[#34834e]"><Key size={18} className="shrink-0 text-[#64786a]" /><input id="register-password" type="password" autoComplete="new-password" minLength={8} value={registerData.password} onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })} placeholder="At least 8 characters" className="w-full px-3 py-3.5 text-sm outline-none" required /></div></div>
+                <button type="submit" disabled={authLoading} className="w-full rounded-xl bg-[#153c2a] px-4 py-3.5 text-sm font-bold text-white hover:bg-[#245b3b] disabled:cursor-not-allowed disabled:opacity-60">{authLoading ? "Creating account…" : "Create account"}</button>
+                <p className="text-center text-sm text-[#64786a]">Already registered? <button type="button" onClick={() => switchAuth("Login")} className="font-bold text-[#34834e] hover:underline">Log in</button></p>
+              </>}
+
+              {auth === "Forgot Password" && <>
+                <div><label htmlFor="forgot-email" className="mb-2 block text-sm font-semibold">Email address</label><div className="flex items-center rounded-xl border border-[#dfe7e1] px-4 focus-within:border-[#34834e]"><Mail size={18} className="shrink-0 text-[#64786a]" /><input id="forgot-email" type="email" autoComplete="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="you@example.com" className="w-full px-3 py-3.5 text-sm outline-none" required /></div></div>
+                <button type="submit" disabled={authLoading} className="w-full rounded-xl bg-[#153c2a] px-4 py-3.5 text-sm font-bold text-white hover:bg-[#245b3b] disabled:opacity-60">{authLoading ? "Sending code…" : "Send verification code"}</button>
+                <button type="button" onClick={() => switchAuth("Login")} className="w-full py-2 text-sm font-semibold text-[#34834e] hover:underline">Back to login</button>
+              </>}
+
+              {(auth === "Verify Email" || auth === "Verify Reset Code") && <>
+                <div><label htmlFor="verification-code" className="mb-2 block text-sm font-semibold">Verification code</label><div className="flex items-center rounded-xl border border-[#dfe7e1] px-4 focus-within:border-[#34834e]"><ShieldCheck size={18} className="shrink-0 text-[#64786a]" /><input id="verification-code" inputMode="numeric" autoComplete="one-time-code" value={resetCode} onChange={(e) => setResetCode(e.target.value.replace(/\D/g, "").slice(0, 8))} placeholder="Enter code from email" className="w-full px-3 py-3.5 text-sm tracking-[0.2em] outline-none" required /></div></div>
+                <button type="submit" disabled={authLoading} className="w-full rounded-xl bg-[#153c2a] px-4 py-3.5 text-sm font-bold text-white hover:bg-[#245b3b] disabled:opacity-60">{authLoading ? "Verifying…" : auth === "Verify Email" ? "Verify email" : "Verify code"}</button>
+                <button type="button" disabled={authLoading} onClick={handleResendCode} className="w-full py-2 text-sm font-semibold text-[#34834e] hover:underline disabled:opacity-60">Resend code</button>
+                <button type="button" onClick={() => switchAuth(auth === "Verify Email" ? "Register" : "Forgot Password")} className="w-full text-sm text-[#829087] hover:underline">Use a different email</button>
+              </>}
+
+              {auth === "Reset Password" && <>
+                <div><label htmlFor="new-password" className="mb-2 block text-sm font-semibold">New password</label><div className="flex items-center rounded-xl border border-[#dfe7e1] px-4 focus-within:border-[#34834e]"><Key size={18} className="shrink-0 text-[#64786a]" /><input id="new-password" type="password" autoComplete="new-password" minLength={8} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="At least 8 characters" className="w-full px-3 py-3.5 text-sm outline-none" required /></div></div>
+                <div><label htmlFor="confirm-password" className="mb-2 block text-sm font-semibold">Confirm new password</label><div className="flex items-center rounded-xl border border-[#dfe7e1] px-4 focus-within:border-[#34834e]"><Key size={18} className="shrink-0 text-[#64786a]" /><input id="confirm-password" type="password" autoComplete="new-password" minLength={8} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Re-enter your new password" className="w-full px-3 py-3.5 text-sm outline-none" required /></div></div>
+                <button type="submit" disabled={authLoading} className="w-full rounded-xl bg-[#153c2a] px-4 py-3.5 text-sm font-bold text-white hover:bg-[#245b3b] disabled:opacity-60">{authLoading ? "Resetting password…" : "Reset password"}</button>
+              </>}
+            </form>
+          </div>
+        </div>
+      )}
       {/* Add funds / Withdraw dialog */}
       {walletAction && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
