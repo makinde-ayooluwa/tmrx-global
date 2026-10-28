@@ -346,7 +346,7 @@ function App() {
 
       {user !== null &&
         <h2 className="mt-6 text-3xl font-bold tracking-tight sm:text-4xl">
-          {balanceVisible ? "₦0.00" : "••••••"}
+          {balanceVisible ? `₦${userData.wallet.toLocaleString()}` : "••••••"}
         </h2>
       }
       {user == null &&

@@ -36,26 +36,28 @@ export const UserProvider = ({ children }) => {
                     setUserData(result.data);
                 } else {
                     setUserData(null);
+                    setUser(null);
+                    sessionStorage.removeItem("user");
                 }
                 
-                Swal.fire({
-                    title: result.status == true ? "Success" : "Error",
-                    text: result.status ? "Profile data fetched successfully" : "Error occured while fetching profile data",
-                    icon: result.status == true ? "success" : "error",
-                    timer: 4000,
-                    showConfirmButton: false,
-                    position: "top-end",
-                    toast: true,
-                })
+                // Swal.fire({
+                //     title: result.status == true ? "Success" : "Error",
+                //     text: result.status ? "Profile data fetched successfully" : "Error occured while fetching profile data",
+                //     icon: result.status == true ? "success" : "error",
+                //     timer: 4000,
+                //     showConfirmButton: false,
+                //     position: "top-end",
+                //     toast: true,
+                // })
                 console.log(result.message)
             } catch (error) {
-                Swal.fire({
-                    title: "Profile error occured",
-                    toast: true,
-                    icon: "error",
-                    timer: 4000,
-                    showConfirmButton: false
-                })
+                // Swal.fire({
+                //     title: "Profile error occured",
+                //     toast: true,
+                //     icon: "error",
+                //     timer: 4000,
+                //     showConfirmButton: false
+                // })
             }
         }
         getUser();
