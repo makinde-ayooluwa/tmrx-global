@@ -155,7 +155,9 @@ function App() {
   const [authError, setAuthError] = useState("");
   const [authSuccess, setAuthSuccess] = useState("");
   const [auth, setAuth] = useState("");
+  const verifyPayment = async(reference)=>{
 
+  }
   const switchAuth = (next) => {
     setAuth(next);
     setAuthError("");
@@ -2324,7 +2326,7 @@ const renderMarketCards = () => (
                   Close
                 </button>
 
-                <PaystackCheckout  />
+                <PaystackCheckout email={userData.email} amountInNaira={actionAmount} onSuccessCallback={verifyPayment} />
               </div>
             </form>
           </div>

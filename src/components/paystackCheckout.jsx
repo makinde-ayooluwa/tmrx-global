@@ -1,13 +1,13 @@
 import React from 'react';
 import { usePaystackPayment } from 'react-paystack';
 
-const PaystackCheckout = ({ email, amountInNaira, onlycerinSuccess }) => {
+const PaystackCheckout = ({ email, amountInNaira, onSuccessCallback }) => {
   // Paystack expects the amount in kobo (multiply Naira by 100)
   const config = {
-    reference: (new Date()).getTime().toString(),
+    reference: `TX_TMRX_GLOBAL-${(new Date()).getTime().toString()}`,
     email: email,
     amount: Math.round(amountInNaira * 100), // e.g., ₦5,000 = 500000 kobo
-    publicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+    publicKey: "pk_test_f912c77684d9e667cd987c1dce2945b290973a9a",
   };
 
   const initializePayment = usePaystackPayment(config);
