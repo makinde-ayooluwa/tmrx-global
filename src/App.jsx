@@ -2261,7 +2261,7 @@ const renderMarketCards = () => (
               <div>
                 <h2 className="text-xl font-bold">{walletAction}</h2>
                 <p className="mt-1 text-sm text-[#829087]">
-                  NGN wallet · Demo mode
+                  NGN wallet
                 </p>
               </div>
 
@@ -2302,11 +2302,11 @@ const renderMarketCards = () => (
                 />
               </div>
 
-              <div className="mt-4 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-800">
+              {/* <div className="mt-4 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-800">
                 <Info size={17} className="mt-0.5 shrink-0" />
                 This form is a UI preview only. No payment, bank transfer,
                 or withdrawal will be initiated.
-              </div>
+              </div> */}
 
               {actionMessage && (
                 <p className="mt-4 rounded-xl bg-blue-50 p-3 text-sm leading-5 text-blue-800">
