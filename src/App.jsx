@@ -902,10 +902,10 @@ const renderMarketCards = () => (
             </p>
           </div>
 
-          <div className="mt-5 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-800">
+          {/* <div className="mt-5 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-800">
             <RefreshCw size={16} className="mt-0.5 shrink-0" />
             Demo mode: no real transaction will be executed.
-          </div>
+          </div> */}
         </div>
       </div>
     );
@@ -1017,7 +1017,7 @@ const renderMarketCards = () => (
         </div>
       </div>
 
-      <div className="mt-8 flex items-start gap-3 rounded-xl border border-[#e7ece8] bg-white p-4">
+      {/* <div className="mt-8 flex items-start gap-3 rounded-xl border border-[#e7ece8] bg-white p-4">
         <Info size={19} className="mt-0.5 shrink-0 text-[#34834e]" />
         <div>
           <p className="text-sm font-semibold">Demo environment</p>
@@ -1026,7 +1026,7 @@ const renderMarketCards = () => (
             data, payments, and real transactions are not connected.
           </p>
         </div>
-      </div>
+      </div> */}
     </section>
   );
 
@@ -1773,7 +1773,7 @@ const renderMarketCards = () => (
         {activePage === "Order Preview" && renderOrderPreview()}
 
         <footer className="px-4 pb-8 text-center text-xs text-[#98a39b]">
-          TMRX Global · Demo interface · Not connected to real funds
+          TMRX Global ·  All Rights Reserved · {new Date().getFullYear()}
         </footer>
       </main>
 
