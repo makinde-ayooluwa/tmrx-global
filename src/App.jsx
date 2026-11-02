@@ -515,38 +515,42 @@ function App() {
 
 
 
-  const renderMarketCards = () => (
-    <div>
-      {!connected && (
-        <p className="mb-4 text-xs text-amber-600">
-          Reconnecting to live market data...
-        </p>
-      )}
+  // Define coinDetails outside the component/function to keep it clean and performant
+const coinDetailsConfig = {
+  BTCUSDT: {
+    name: "Bitcoin",
+    icon: "₿",
+    color: "bg-orange-100 text-orange-600"
+  },
+  ETHUSDT: {
+    name: "Ethereum",
+    icon: "Ξ",
+    color: "bg-indigo-100 text-indigo-600"
+  },
+  // Change this key to match whatever your API is actually sending for Tether!
+  USDCUSDT: { 
+    name: "Tether",
+    icon: "₮",
+    color: "bg-green-100 text-green-600"
+  }
+};
+console.log("All incoming market symbols:", markets.map(c => c.symbol));
+const renderMarketCards = () => (
+  <div>
+    {!connected && (
+      <p className="mb-4 text-xs text-amber-600">
+        Reconnecting to live market data...
+      </p>
+    )}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {markets.map((coin) => {
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      {markets
+        .filter((coin) => coinDetailsConfig[coin.symbol])
+        .map((coin) => {
           const change = Number(coin.price24hPcnt) * 100;
           const positive = change >= 0;
 
-          const coinDetails = {
-            BTCUSDT: {
-              name: "Bitcoin",
-              icon: "₿",
-              color: "bg-orange-100 text-orange-600"
-            },
-            ETHUSDT: {
-              name: "Ethereum",
-              icon: "Ξ",
-              color: "bg-indigo-100 text-indigo-600"
-            },
-            USDTUSDC: {
-              name: "Tether",
-              icon: "₮",
-              color: "bg-green-100 text-green-600"
-            }
-          };
-
-          const details = coinDetails[coin.symbol] || {
+          const details = coinDetailsConfig[coin.symbol] || {
             name: coin.symbol,
             icon: coin.symbol.charAt(0),
             color: "bg-gray-100 text-gray-600"
@@ -560,9 +564,9 @@ function App() {
 
           const formattedNaira = nairaPrice !== null
             ? `₦${nairaPrice.toLocaleString("en-NG", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2
-            })}`
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })}`
             : "Loading rate...";
 
           const formattedDollar = `$${dollarPrice.toLocaleString("en-US", {
@@ -623,10 +627,11 @@ function App() {
                 </span>
 
                 <span
-                  className={`rounded-md px-2 py-1 text-xs font-semibold ${positive
+                  className={`rounded-md px-2 py-1 text-xs font-semibold ${
+                    positive
                       ? "bg-emerald-50 text-emerald-700"
                       : "bg-red-50 text-red-600"
-                    }`}
+                  }`}
                 >
                   {positive ? "+" : ""}
                   {change.toFixed(2)}%
@@ -635,15 +640,15 @@ function App() {
             </div>
           );
         })}
-      </div>
-
-      {markets.length === 0 && (
-        <p className="py-8 text-center text-sm text-gray-500">
-          Waiting for market data...
-        </p>
-      )}
     </div>
-  );
+
+    {markets.length === 0 && (
+      <p className="py-8 text-center text-sm text-gray-500">
+        Waiting for market data...
+      </p>
+    )}
+  </div>
+);
   const renderTradeForm = () => {
     const selectedMarket = markets.find(
       (coin) => coin.symbol === `${selectedCoin}USDT`
