@@ -39,6 +39,7 @@ import Logo from "./assets/tmrx-global-3.png";
 import { useUser } from "./contexts/userProvider";
 import Swal from "sweetalert2";
 import { useMarket } from "./contexts/marketProvider";
+import PaystackCheckout from "./components/paystackCheckout";
 
 const navigation = [
   { label: "Dashboard", icon: LayoutDashboard },
@@ -2323,12 +2324,7 @@ const renderMarketCards = () => (
                   Close
                 </button>
 
-                <button
-                  type="submit"
-                  className="flex-1 rounded-xl bg-[#153c2a] px-4 py-3 text-sm font-semibold text-white hover:bg-[#245b3b]"
-                >
-                  Preview request
-                </button>
+                <PaystackCheckout  />
               </div>
             </form>
           </div>
