@@ -534,7 +534,6 @@ const coinDetailsConfig = {
     color: "bg-green-100 text-green-600"
   }
 };
-console.log("All incoming market symbols:", markets.map(c => c.symbol));
 const renderMarketCards = () => (
   <div>
     {!connected && (
