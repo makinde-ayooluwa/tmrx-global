@@ -131,7 +131,7 @@ function App() {
     resetPassword,
     resendVerificationCode,
   } = useUser();
-const {markets, connected, exchangeRate} = useMarket();
+  const { markets, connected, exchangeRate } = useMarket();
   // Authentication state
   const [registerData, setRegisterData] = useState({
     fullname: "",
@@ -513,401 +513,399 @@ const {markets, connected, exchangeRate} = useMarket();
     </div>
   );
 
-  
 
-const renderMarketCards = () => (
+
+  const renderMarketCards = () => (
     <div>
-        {!connected && (
-            <p className="mb-4 text-xs text-amber-600">
-                Reconnecting to live market data...
-            </p>
-        )}
+      {!connected && (
+        <p className="mb-4 text-xs text-amber-600">
+          Reconnecting to live market data...
+        </p>
+      )}
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {markets.map((coin) => {
-                const change = Number(coin.price24hPcnt) * 100;
-                const positive = change >= 0;
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {markets.map((coin) => {
+          const change = Number(coin.price24hPcnt) * 100;
+          const positive = change >= 0;
 
-                const coinDetails = {
-                    BTCUSDT: {
-                        name: "Bitcoin",
-                        icon: "₿",
-                        color: "bg-orange-100 text-orange-600"
-                    },
-                    ETHUSDT: {
-                        name: "Ethereum",
-                        icon: "Ξ",
-                        color: "bg-indigo-100 text-indigo-600"
-                    },
-                    USDTUSDC: {
-                        name: "Tether",
-                        icon: "₮",
-                        color: "bg-green-100 text-green-600"
-                    }
-                };
+          const coinDetails = {
+            BTCUSDT: {
+              name: "Bitcoin",
+              icon: "₿",
+              color: "bg-orange-100 text-orange-600"
+            },
+            ETHUSDT: {
+              name: "Ethereum",
+              icon: "Ξ",
+              color: "bg-indigo-100 text-indigo-600"
+            },
+            USDTUSDC: {
+              name: "Tether",
+              icon: "₮",
+              color: "bg-green-100 text-green-600"
+            }
+          };
 
-                const details = coinDetails[coin.symbol] || {
-                    name: coin.symbol,
-                    icon: coin.symbol.charAt(0),
-                    color: "bg-gray-100 text-gray-600"
-                };
+          const details = coinDetails[coin.symbol] || {
+            name: coin.symbol,
+            icon: coin.symbol.charAt(0),
+            color: "bg-gray-100 text-gray-600"
+          };
 
-                const dollarPrice = Number(coin.lastPrice);
+          const dollarPrice = Number(coin.lastPrice);
 
-                const nairaPrice = exchangeRate !== null
-                    ? dollarPrice * exchangeRate
-                    : null;
+          const nairaPrice = exchangeRate !== null
+            ? dollarPrice * exchangeRate
+            : null;
 
-                const formattedNaira = nairaPrice !== null
-                    ? `₦${nairaPrice.toLocaleString("en-NG", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                    })}`
-                    : "Loading rate...";
+          const formattedNaira = nairaPrice !== null
+            ? `₦${nairaPrice.toLocaleString("en-NG", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
+            })}`
+            : "Loading rate...";
 
-                const formattedDollar = `$${dollarPrice.toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 8
-                })}`;
+          const formattedDollar = `$${dollarPrice.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 8
+          })}`;
 
-                return (
-                    <div
-                        key={coin.symbol}
-                        className="rounded-2xl border border-[#e7ece8] bg-white p-5 transition hover:border-[#b6d9bf]"
-                    >
-                        <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3">
-                                <div
-                                    className={`flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold ${details.color}`}
-                                >
-                                    {details.icon}
-                                </div>
+          return (
+            <div
+              key={coin.symbol}
+              className="rounded-2xl border border-[#e7ece8] bg-white p-5 transition hover:border-[#b6d9bf]"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold ${details.color}`}
+                  >
+                    {details.icon}
+                  </div>
 
-                                <div>
-                                    <h3 className="text-sm font-bold">
-                                        {details.name}
-                                    </h3>
+                  <div>
+                    <h3 className="text-sm font-bold">
+                      {details.name}
+                    </h3>
 
-                                    <p className="mt-1 text-xs text-[#829087]">
-                                        {coin.symbol}
-                                    </p>
-                                </div>
-                            </div>
+                    <p className="mt-1 text-xs text-[#829087]">
+                      {coin.symbol}
+                    </p>
+                  </div>
+                </div>
 
-                            {positive ? (
-                                <TrendingUp
-                                    size={19}
-                                    className="text-emerald-600"
-                                />
-                            ) : (
-                                <TrendingDown
-                                    size={19}
-                                    className="text-red-500"
-                                />
-                            )}
-                        </div>
+                {positive ? (
+                  <TrendingUp
+                    size={19}
+                    className="text-emerald-600"
+                  />
+                ) : (
+                  <TrendingDown
+                    size={19}
+                    className="text-red-500"
+                  />
+                )}
+              </div>
 
-                        {/* Naira price */}
-                        <p className="mt-6 text-xl font-bold tracking-tight">
-                            {formattedNaira}
-                        </p>
+              {/* Naira price */}
+              <p className="mt-6 text-xl font-bold tracking-tight">
+                {formattedNaira}
+              </p>
 
-                        {/* Dollar price */}
-                        <p className="mt-1 text-xs text-[#829087]">
-                            {formattedDollar} USD
-                        </p>
+              {/* Dollar price */}
+              <p className="mt-1 text-xs text-[#829087]">
+                {formattedDollar} USD
+              </p>
 
-                        <div className="mt-3 flex items-center justify-between gap-2">
-                            <span className="text-xs text-[#829087]">
-                                24h change
-                            </span>
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <span className="text-xs text-[#829087]">
+                  24h change
+                </span>
 
-                            <span
-                                className={`rounded-md px-2 py-1 text-xs font-semibold ${
-                                    positive
-                                        ? "bg-emerald-50 text-emerald-700"
-                                        : "bg-red-50 text-red-600"
-                                }`}
-                            >
-                                {positive ? "+" : ""}
-                                {change.toFixed(2)}%
-                            </span>
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
+                <span
+                  className={`rounded-md px-2 py-1 text-xs font-semibold ${positive
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-red-50 text-red-600"
+                    }`}
+                >
+                  {positive ? "+" : ""}
+                  {change.toFixed(2)}%
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
-        {markets.length === 0 && (
-            <p className="py-8 text-center text-sm text-gray-500">
-                Waiting for market data...
-            </p>
-        )}
+      {markets.length === 0 && (
+        <p className="py-8 text-center text-sm text-gray-500">
+          Waiting for market data...
+        </p>
+      )}
     </div>
-);  
-const renderTradeForm = () => {
+  );
+  const renderTradeForm = () => {
     const selectedMarket = markets.find(
-        (coin) => coin.symbol === `${selectedCoin}USDT`
+      (coin) => coin.symbol === `${selectedCoin}USDT`
     );
 
     const selectedCoinUsd = selectedMarket
-        ? Number(selectedMarket.lastPrice)
-        : selectedCoin === "USDT"
-            ? 1
-            : 0;
+      ? Number(selectedMarket.lastPrice)
+      : selectedCoin === "USDT"
+        ? 1
+        : 0;
 
     const selectedCoinNgn = exchangeRate
-        ? selectedCoinUsd * exchangeRate
-        : 0;
+      ? selectedCoinUsd * exchangeRate
+      : 0;
 
     const coinAmount = Number(tradeAmount) || 0;
     const estimatedAmount = coinAmount * selectedCoinNgn;
 
     const coinNames = {
-        BTC: "Bitcoin",
-        ETH: "Ethereum",
-        USDT: "Tether"
+      BTC: "Bitcoin",
+      ETH: "Ethereum",
+      USDT: "Tether"
     };
 
     const availableCoins = [
-        ...markets.map((coin) => ({
-            symbol: coin.symbol.replace("USDT", ""),
-            pair: coin.symbol,
-            name: coinNames[coin.symbol.replace("USDT", "")]
-                || coin.symbol.replace("USDT", "")
-        })),
-        ...(!markets.some((coin) => coin.symbol === "BTCUSDT")
-            ? []
-            : []),
+      ...markets.map((coin) => ({
+        symbol: coin.symbol.replace("USDT", ""),
+        pair: coin.symbol,
+        name: coinNames[coin.symbol.replace("USDT", "")]
+          || coin.symbol.replace("USDT", "")
+      })),
+      ...(!markets.some((coin) => coin.symbol === "BTCUSDT")
+        ? []
+        : []),
     ];
 
     // Add USDT as a base stablecoin.
     if (!availableCoins.some((coin) => coin.symbol === "USDT")) {
-        availableCoins.unshift({
-            symbol: "USDT",
-            pair: "USDT",
-            name: "Tether"
-        });
+      availableCoins.unshift({
+        symbol: "USDT",
+        pair: "USDT",
+        name: "Tether"
+      });
     }
 
     return (
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
 
-            {/* Trade form */}
-            <div className="rounded-2xl border border-[#e7ece8] bg-white p-5 sm:p-7 xl:col-span-2">
+        {/* Trade form */}
+        <div className="rounded-2xl border border-[#e7ece8] bg-white p-5 sm:p-7 xl:col-span-2">
 
-                <div className="grid grid-cols-2 rounded-xl bg-[#f3f6f3] p-1">
-                    {["buy", "sell"].map((type) => (
-                        <button
-                            key={type}
-                            onClick={() => setTradeType(type)}
-                            className={`rounded-lg py-3 text-sm font-semibold capitalize transition ${
-                                tradeType === type
-                                    ? "bg-[#153c2a] text-white shadow-sm"
-                                    : "text-[#829087] hover:text-[#17251e]"
-                            }`}
-                        >
-                            {type === "buy" ? "Buy Crypto" : "Sell Crypto"}
-                        </button>
-                    ))}
-                </div>
+          <div className="grid grid-cols-2 rounded-xl bg-[#f3f6f3] p-1">
+            {["buy", "sell"].map((type) => (
+              <button
+                key={type}
+                onClick={() => setTradeType(type)}
+                className={`rounded-lg py-3 text-sm font-semibold capitalize transition ${tradeType === type
+                    ? "bg-[#153c2a] text-white shadow-sm"
+                    : "text-[#829087] hover:text-[#17251e]"
+                  }`}
+              >
+                {type === "buy" ? "Buy Crypto" : "Sell Crypto"}
+              </button>
+            ))}
+          </div>
 
-                <div className="mt-7">
-                    <label
-                        htmlFor="coin"
-                        className="mb-2 block text-sm font-semibold"
-                    >
-                        Select cryptocurrency
-                    </label>
+          <div className="mt-7">
+            <label
+              htmlFor="coin"
+              className="mb-2 block text-sm font-semibold"
+            >
+              Select cryptocurrency
+            </label>
 
-                    <select
-                        id="coin"
-                        value={selectedCoin}
-                        onChange={(event) => setSelectedCoin(event.target.value)}
-                        className="w-full rounded-xl border border-[#dfe7e1] bg-white px-4 py-3.5 text-sm outline-none focus:border-[#34834e]"
-                    >
-                        {[...availableCoins]
-    .sort((a, b) => a.symbol.localeCompare(b.symbol))
-    .map((coin) => (
-        <option
-            key={coin.pair}
-            value={coin.symbol}
-        >
-            {coin.symbol} — {coin.name}
-        </option>
-    ))}
-                    </select>
+            <select
+              id="coin"
+              value={selectedCoin}
+              onChange={(event) => setSelectedCoin(event.target.value)}
+              className="w-full rounded-xl border border-[#dfe7e1] bg-white px-4 py-3.5 text-sm outline-none focus:border-[#34834e]"
+            >
+              {[...availableCoins]
+                .sort((a, b) => a.symbol.localeCompare(b.symbol))
+                .map((coin) => (
+                  <option
+                    key={coin.pair}
+                    value={coin.symbol}
+                  >
+                    {coin.symbol} — {coin.name}
+                  </option>
+                ))}
+            </select>
 
-                    {!connected && (
-                        <p className="mt-2 text-xs text-amber-600">
-                            Reconnecting to live market data...
-                        </p>
-                    )}
-                </div>
+            {!connected && (
+              <p className="mt-2 text-xs text-amber-600">
+                Reconnecting to live market data...
+              </p>
+            )}
+          </div>
 
-                <div className="mt-5">
-                    <label
-                        htmlFor="trade-amount"
-                        className="mb-2 block text-sm font-semibold"
-                    >
-                        Trade amount ({selectedCoin})
-                    </label>
+          <div className="mt-5">
+            <label
+              htmlFor="trade-amount"
+              className="mb-2 block text-sm font-semibold"
+            >
+              Trade amount ({selectedCoin})
+            </label>
 
-                    <input
-                        id="trade-amount"
-                        type="number"
-                        min="0"
-                        step="any"
-                        value={tradeAmount}
-                        onChange={(event) => setTradeAmount(event.target.value)}
-                        placeholder="Enter amount"
-                        className="w-full rounded-xl border border-[#dfe7e1] px-4 py-3.5 text-sm outline-none focus:border-[#34834e]"
-                    />
-                </div>
+            <input
+              id="trade-amount"
+              type="number"
+              min="0"
+              step="any"
+              value={tradeAmount}
+              onChange={(event) => setTradeAmount(event.target.value)}
+              placeholder="Enter amount"
+              className="w-full rounded-xl border border-[#dfe7e1] px-4 py-3.5 text-sm outline-none focus:border-[#34834e]"
+            />
+          </div>
 
-                {/* Trade estimate */}
-                <div className="mt-5 rounded-xl bg-[#f5f9f5] p-4">
+          {/* Trade estimate */}
+          <div className="mt-5 rounded-xl bg-[#f5f9f5] p-4">
 
-                    <div className="flex items-center justify-between gap-3">
-                        <span className="text-sm text-[#64786a]">
-                            Estimated {tradeType === "buy"
-                                ? "naira amount to send"
-                                : "naira amount to receive"}
-                        </span>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-[#64786a]">
+                Estimated {tradeType === "buy"
+                  ? "naira amount to send"
+                  : "naira amount to receive"}
+              </span>
 
-                        <span className="text-right text-base font-bold">
-                            {exchangeRate
-                                ? `₦${estimatedAmount.toLocaleString("en-NG", {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                })}`
-                                : "Loading rate..."}
-                        </span>
-                    </div>
-
-                    <div className="mt-3 flex items-center justify-between gap-3">
-                        <span className="text-sm text-[#64786a]">
-                            Estimated {tradeType === "buy"
-                                ? "crypto to receive"
-                                : "crypto to send"}
-                        </span>
-
-                        <span className="text-right text-base font-bold">
-                            {coinAmount.toLocaleString("en-US", {
-                                maximumFractionDigits: 8
-                            })} {selectedCoin}
-                        </span>
-                    </div>
-
-                    <div className="mt-3 flex items-center justify-between border-t border-[#e1ebe2] pt-3 text-xs text-[#829087]">
-                        <span>NGN rate</span>
-
-                        <span>
-                            ₦{selectedCoinNgn.toLocaleString("en-NG", {
-                                maximumFractionDigits: 2
-                            })} / {selectedCoin}
-                        </span>
-                    </div>
-
-                    <div className="mt-2 flex items-center justify-between text-xs text-[#829087]">
-                        <span>USD market price</span>
-
-                        <span>
-                            ${selectedCoinUsd.toLocaleString("en-US", {
-                                maximumFractionDigits: 8
-                            })}
-                        </span>
-                    </div>
-
-                    {!selectedCoinUsd && (
-                        <p className="mt-3 text-xs text-amber-600">
-                            Market price unavailable for this coin.
-                        </p>
-                    )}
-                </div>
-
-                <button
-                    onClick={() => {
-                        if (user == null) {
-                            Swal.fire({
-                                title: "Login required",
-                                text: "Login to place an order.",
-                                icon: "info",
-                            });
-                        } else {
-                            goTo("Order Preview");
-                        }
-                    }}
-                    disabled={
-                        coinAmount <= 0 ||
-                        selectedCoinUsd <= 0 ||
-                        !exchangeRate
-                    }
-                    className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#153c2a] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#245b3b] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    <ArrowLeftRight size={18} />
-                    Review {tradeType === "buy" ? "Buy" : "Sell"} Order
-                </button>
+              <span className="text-right text-base font-bold">
+                {exchangeRate
+                  ? `₦${estimatedAmount.toLocaleString("en-NG", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}`
+                  : "Loading rate..."}
+              </span>
             </div>
 
-            {/* Information panel */}
-            <div className="h-fit rounded-2xl border border-[#e7ece8] bg-white p-6">
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <span className="text-sm text-[#64786a]">
+                Estimated {tradeType === "buy"
+                  ? "crypto to receive"
+                  : "crypto to send"}
+              </span>
 
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#edf8ef] text-[#34834e]">
-                    <Info size={22} />
-                </div>
-
-                <h3 className="mt-5 text-base font-bold">
-                    Before you trade
-                </h3>
-
-                <div className="mt-4 space-y-4 text-sm leading-6 text-[#64786a]">
-
-                    <p>
-                        <strong className="text-[#23372b]">
-                            Exchange rate
-                        </strong>
-                        <br />
-                        Market prices are converted to naira using the latest
-                        available USD/NGN reference rate.
-                    </p>
-
-                    <p>
-                        <strong className="text-[#23372b]">
-                            Market availability
-                        </strong>
-                        <br />
-                        Only cryptocurrencies with available market prices
-                        can be selected for estimates.
-                    </p>
-
-                    <p>
-                        <strong className="text-[#23372b]">
-                            Payment and settlement
-                        </strong>
-                        <br />
-                        Real transactions require secure payment verification
-                        and appropriate settlement.
-                    </p>
-
-                    <p>
-                        <strong className="text-[#23372b]">
-                            Order status
-                        </strong>
-                        <br />
-                        Pending, processing, completed, and failed states
-                        will be connected to the backend.
-                    </p>
-                </div>
-
-                <div className="mt-5 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-800">
-                    <RefreshCw size={16} className="mt-0.5 shrink-0" />
-                    Demo mode: no real transaction will be executed.
-                </div>
+              <span className="text-right text-base font-bold">
+                {coinAmount.toLocaleString("en-US", {
+                  maximumFractionDigits: 8
+                })} {selectedCoin}
+              </span>
             </div>
+
+            <div className="mt-3 flex items-center justify-between border-t border-[#e1ebe2] pt-3 text-xs text-[#829087]">
+              <span>NGN rate</span>
+
+              <span>
+                ₦{selectedCoinNgn.toLocaleString("en-NG", {
+                  maximumFractionDigits: 2
+                })} / {selectedCoin}
+              </span>
+            </div>
+
+            <div className="mt-2 flex items-center justify-between text-xs text-[#829087]">
+              <span>USD market price</span>
+
+              <span>
+                ${selectedCoinUsd.toLocaleString("en-US", {
+                  maximumFractionDigits: 8
+                })}
+              </span>
+            </div>
+
+            {!selectedCoinUsd && (
+              <p className="mt-3 text-xs text-amber-600">
+                Market price unavailable for this coin.
+              </p>
+            )}
+          </div>
+
+          <button
+            onClick={() => {
+              if (user == null) {
+                Swal.fire({
+                  title: "Login required",
+                  text: "Login to place an order.",
+                  icon: "info",
+                });
+              } else {
+                goTo("Order Preview");
+              }
+            }}
+            disabled={
+              coinAmount <= 0 ||
+              selectedCoinUsd <= 0 ||
+              !exchangeRate
+            }
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#153c2a] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#245b3b] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <ArrowLeftRight size={18} />
+            Review {tradeType === "buy" ? "Buy" : "Sell"} Order
+          </button>
         </div>
+
+        {/* Information panel */}
+        <div className="h-fit rounded-2xl border border-[#e7ece8] bg-white p-6">
+
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#edf8ef] text-[#34834e]">
+            <Info size={22} />
+          </div>
+
+          <h3 className="mt-5 text-base font-bold">
+            Before you trade
+          </h3>
+
+          <div className="mt-4 space-y-4 text-sm leading-6 text-[#64786a]">
+
+            <p>
+              <strong className="text-[#23372b]">
+                Exchange rate
+              </strong>
+              <br />
+              Market prices are converted to naira using the latest
+              available USD/NGN reference rate.
+            </p>
+
+            <p>
+              <strong className="text-[#23372b]">
+                Market availability
+              </strong>
+              <br />
+              Only cryptocurrencies with available market prices
+              can be selected for estimates.
+            </p>
+
+            <p>
+              <strong className="text-[#23372b]">
+                Payment and settlement
+              </strong>
+              <br />
+              Real transactions require secure payment verification
+              and appropriate settlement.
+            </p>
+
+            <p>
+              <strong className="text-[#23372b]">
+                Order status
+              </strong>
+              <br />
+              Pending, processing, completed, and failed states
+              will be connected to the backend.
+            </p>
+          </div>
+
+          <div className="mt-5 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-800">
+            <RefreshCw size={16} className="mt-0.5 shrink-0" />
+            Demo mode: no real transaction will be executed.
+          </div>
+        </div>
+      </div>
     );
-};
+  };
 
 
   const filteredTransactions = sampleTransactions.filter(
@@ -1232,8 +1230,8 @@ const renderTradeForm = () => {
                 <div className="text-right">
                   <p
                     className={`text-sm font-bold ${transaction.amount > 0
-                        ? "text-emerald-700"
-                        : "text-[#23372b]"
+                      ? "text-emerald-700"
+                      : "text-[#23372b]"
                       }`}
                   >
                     {transaction.amount > 0 ? "+" : "−"}
@@ -1242,8 +1240,8 @@ const renderTradeForm = () => {
 
                   <span
                     className={`mt-1 inline-block rounded-full px-2.5 py-1 text-[10px] font-semibold ${transaction.status === "Completed"
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "bg-amber-50 text-amber-700"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-amber-50 text-amber-700"
                       }`}
                   >
                     {transaction.status}
@@ -1273,257 +1271,256 @@ const renderTradeForm = () => {
   );
 
   const renderSettings = () => (
-  !user ? (
-    <section className={`${pageClass} flex min-h-[65vh] items-center justify-center`}>
-      <div className="w-full max-w-md rounded-2xl border border-[#e7ece8] bg-white px-6 py-12 text-center shadow-sm">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#edf8ef] text-[#34834e]">
-          <Settings size={30} />
-        </div>
+    !user ? (
+      <section className={`${pageClass} flex min-h-[65vh] items-center justify-center`}>
+        <div className="w-full max-w-md rounded-2xl border border-[#e7ece8] bg-white px-6 py-12 text-center shadow-sm">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#edf8ef] text-[#34834e]">
+            <Settings size={30} />
+          </div>
 
-        <h2 className="mt-6 text-xl font-bold text-[#23372b]">
-          Sign in to access settings
-        </h2>
+          <h2 className="mt-6 text-xl font-bold text-[#23372b]">
+            Sign in to access settings
+          </h2>
 
-        <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#829087]">
-          Sign in to manage your profile, notification preferences, and account security settings.
-        </p>
+          <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#829087]">
+            Sign in to manage your profile, notification preferences, and account security settings.
+          </p>
 
-        <button
-          onClick={() => setAuth("Login")}
-          className="mt-7 w-full rounded-xl bg-[#34834e] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#286b3e]"
-        >
-          Sign in to continue
-        </button>
-
-        <p className="mt-4 text-xs text-[#829087]">
-          Don't have an account?{" "}
           <button
-            onClick={() => setAuth("Register")}
-            className="font-semibold text-[#34834e] hover:underline"
+            onClick={() => setAuth("Login")}
+            className="mt-7 w-full rounded-xl bg-[#34834e] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#286b3e]"
           >
-            Create an account
+            Sign in to continue
           </button>
-        </p>
-      </div>
-    </section>
-  ) : (
-    <section className={pageClass}>
-      <div className="mb-7">
-        <p className="mb-2 text-[10px] font-bold tracking-[2px] text-[#378a56]">
-          ACCOUNT PREFERENCES
-        </p>
-        <h1 className="text-2xl font-bold sm:text-3xl">Settings</h1>
-        <p className="mt-2 text-sm text-[#829087]">
-          Manage your profile and interface preferences.
-        </p>
-      </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-4">
-        <div className="h-fit rounded-2xl border border-[#e7ece8] bg-white p-3">
-          {[
-            { label: "Profile", icon: User },
-            { label: "Notifications", icon: Bell },
-            { label: "Security", icon: ShieldCheck },
-          ].map(({ label, icon: Icon }) => (
+          <p className="mt-4 text-xs text-[#829087]">
+            Don't have an account?{" "}
             <button
-              key={label}
-              onClick={() => setSettingsTab(label)}
-              className={`flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium transition ${
-                settingsTab === label
-                  ? "bg-[#edf8ef] text-[#245b3b]"
-                  : "text-[#64786a] hover:bg-gray-50"
-              }`}
+              onClick={() => setAuth("Register")}
+              className="font-semibold text-[#34834e] hover:underline"
             >
-              <Icon size={19} />
-              {label}
-              {settingsTab === label && (
-                <ChevronRight size={16} className="ml-auto" />
-              )}
+              Create an account
             </button>
-          ))}
+          </p>
+        </div>
+      </section>
+    ) : (
+      <section className={pageClass}>
+        <div className="mb-7">
+          <p className="mb-2 text-[10px] font-bold tracking-[2px] text-[#378a56]">
+            ACCOUNT PREFERENCES
+          </p>
+          <h1 className="text-2xl font-bold sm:text-3xl">Settings</h1>
+          <p className="mt-2 text-sm text-[#829087]">
+            Manage your profile and interface preferences.
+          </p>
         </div>
 
-        <div className="rounded-2xl border border-[#e7ece8] bg-white p-5 sm:p-7 lg:col-span-3">
-          {settingsTab === "Profile" && (
-            <>
-              <h2 className="text-lg font-bold">
-                Profile information
-              </h2>
-              <p className="mt-1 text-sm text-[#829087]">
-                Your current account information.
-              </p>
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-4">
+          <div className="h-fit rounded-2xl border border-[#e7ece8] bg-white p-3">
+            {[
+              { label: "Profile", icon: User },
+              { label: "Notifications", icon: Bell },
+              { label: "Security", icon: ShieldCheck },
+            ].map(({ label, icon: Icon }) => (
+              <button
+                key={label}
+                onClick={() => setSettingsTab(label)}
+                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium transition ${settingsTab === label
+                    ? "bg-[#edf8ef] text-[#245b3b]"
+                    : "text-[#64786a] hover:bg-gray-50"
+                  }`}
+              >
+                <Icon size={19} />
+                {label}
+                {settingsTab === label && (
+                  <ChevronRight size={16} className="ml-auto" />
+                )}
+              </button>
+            ))}
+          </div>
 
-              <div className="mt-6 space-y-5">
-                <div>
-                  <label
-                    htmlFor="profile-fullname"
-                    className="mb-2 block text-sm font-semibold"
-                  >
-                    Full name
-                  </label>
-                  <input
-                    id="profile-fullname"
-                    value={userData?.fullname ?? ""}
-                    readOnly
-                    placeholder="Your full name"
-                    className="w-full rounded-xl border border-[#dfe7e1] bg-gray-50 px-4 py-3.5 text-sm outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="profile-email"
-                    className="mb-2 block text-sm font-semibold"
-                  >
-                    Email address
-                  </label>
-                  <input
-                    id="profile-email"
-                    type="email"
-                    value={userData?.email ?? ""}
-                    readOnly
-                    placeholder="you@example.com"
-                    className="w-full rounded-xl border border-[#dfe7e1] bg-gray-50 px-4 py-3.5 text-sm outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="profile-phone"
-                    className="mb-2 block text-sm font-semibold"
-                  >
-                    Phone number
-                  </label>
-                  <input
-                    id="profile-phone"
-                    type="tel"
-                    value={userData?.phone ?? ""}
-                    readOnly
-                    placeholder="Phone number"
-                    className="w-full rounded-xl border border-[#dfe7e1] bg-gray-50 px-4 py-3.5 text-sm outline-none"
-                  />
-                </div>
-
-                <p className="text-xs leading-5 text-[#829087]">
-                  Profile editing will be available when an update-profile
-                  endpoint is connected.
+          <div className="rounded-2xl border border-[#e7ece8] bg-white p-5 sm:p-7 lg:col-span-3">
+            {settingsTab === "Profile" && (
+              <>
+                <h2 className="text-lg font-bold">
+                  Profile information
+                </h2>
+                <p className="mt-1 text-sm text-[#829087]">
+                  Your current account information.
                 </p>
-              </div>
-            </>
-          )}
 
-          {settingsTab === "Notifications" && (
-            <>
-              <h2 className="text-lg font-bold">
-                Notification preferences
-              </h2>
-              <p className="mt-1 text-sm text-[#829087]">
-                Choose which updates you would like to receive.
-              </p>
-
-              <div className="mt-6 space-y-3">
-                {[
-                  {
-                    key: "transactions",
-                    title: "Transaction updates",
-                    description:
-                      "Deposit, withdrawal, and trade status updates.",
-                  },
-                  {
-                    key: "security",
-                    title: "Security alerts",
-                    description:
-                      "Important account security notifications.",
-                  },
-                  {
-                    key: "market",
-                    title: "Market updates",
-                    description:
-                      "Optional market and price notifications.",
-                  },
-                ].map((item) => (
-                  <label
-                    key={item.key}
-                    className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-[#edf0ed] p-4"
-                  >
-                    <div>
-                      <p className="text-sm font-semibold">
-                        {item.title}
-                      </p>
-                      <p className="mt-1 text-xs leading-5 text-[#829087]">
-                        {item.description}
-                      </p>
-                    </div>
-
+                <div className="mt-6 space-y-5">
+                  <div>
+                    <label
+                      htmlFor="profile-fullname"
+                      className="mb-2 block text-sm font-semibold"
+                    >
+                      Full name
+                    </label>
                     <input
-                      type="checkbox"
-                      checked={notifications[item.key]}
-                      onChange={(event) =>
-                        setNotifications({
-                          ...notifications,
-                          [item.key]: event.target.checked,
-                        })
-                      }
-                      className="h-4 w-4 accent-[#34834e]"
+                      id="profile-fullname"
+                      value={userData?.fullname ?? ""}
+                      readOnly
+                      placeholder="Your full name"
+                      className="w-full rounded-xl border border-[#dfe7e1] bg-gray-50 px-4 py-3.5 text-sm outline-none"
                     />
-                  </label>
-                ))}
-              </div>
+                  </div>
 
-              <p className="mt-5 text-xs text-[#829087]">
-                These preferences are currently stored only in page state.
-              </p>
-            </>
-          )}
+                  <div>
+                    <label
+                      htmlFor="profile-email"
+                      className="mb-2 block text-sm font-semibold"
+                    >
+                      Email address
+                    </label>
+                    <input
+                      id="profile-email"
+                      type="email"
+                      value={userData?.email ?? ""}
+                      readOnly
+                      placeholder="you@example.com"
+                      className="w-full rounded-xl border border-[#dfe7e1] bg-gray-50 px-4 py-3.5 text-sm outline-none"
+                    />
+                  </div>
 
-          {settingsTab === "Security" && (
-            <>
-              <h2 className="text-lg font-bold">Security settings</h2>
-              <p className="mt-1 text-sm text-[#829087]">
-                Security controls will be connected to your account backend.
-              </p>
+                  <div>
+                    <label
+                      htmlFor="profile-phone"
+                      className="mb-2 block text-sm font-semibold"
+                    >
+                      Phone number
+                    </label>
+                    <input
+                      id="profile-phone"
+                      type="tel"
+                      value={userData?.phone ?? ""}
+                      readOnly
+                      placeholder="Phone number"
+                      className="w-full rounded-xl border border-[#dfe7e1] bg-gray-50 px-4 py-3.5 text-sm outline-none"
+                    />
+                  </div>
 
-              <div className="mt-6 flex items-start gap-3 rounded-xl border border-[#edf0ed] p-4">
-                <ShieldCheck
-                  size={22}
-                  className="shrink-0 text-[#34834e]"
-                />
-
-                <div className="flex-1">
-                  <p className="text-sm font-semibold">
-                    Two-factor authentication
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-[#829087]">
-                    This visual setting does not activate real two-factor
-                    authentication.
+                  <p className="text-xs leading-5 text-[#829087]">
+                    Profile editing will be available when an update-profile
+                    endpoint is connected.
                   </p>
                 </div>
+              </>
+            )}
 
-                <input
-                  type="checkbox"
-                  checked={securitySettings.twoFactor}
-                  onChange={(event) =>
-                    setSecuritySettings({
-                      ...securitySettings,
-                      twoFactor: event.target.checked,
-                    })
-                  }
-                  className="mt-1 h-4 w-4 accent-[#34834e]"
-                  aria-label="Toggle two-factor authentication preview"
-                />
-              </div>
+            {settingsTab === "Notifications" && (
+              <>
+                <h2 className="text-lg font-bold">
+                  Notification preferences
+                </h2>
+                <p className="mt-1 text-sm text-[#829087]">
+                  Choose which updates you would like to receive.
+                </p>
 
-              <div className="mt-4 flex items-start gap-3 rounded-xl bg-amber-50 p-4 text-xs leading-5 text-amber-800">
-                <AlertCircle size={18} className="mt-0.5 shrink-0" />
-                Security checks must be enforced by the backend.
-              </div>
-            </>
-          )}
+                <div className="mt-6 space-y-3">
+                  {[
+                    {
+                      key: "transactions",
+                      title: "Transaction updates",
+                      description:
+                        "Deposit, withdrawal, and trade status updates.",
+                    },
+                    {
+                      key: "security",
+                      title: "Security alerts",
+                      description:
+                        "Important account security notifications.",
+                    },
+                    {
+                      key: "market",
+                      title: "Market updates",
+                      description:
+                        "Optional market and price notifications.",
+                    },
+                  ].map((item) => (
+                    <label
+                      key={item.key}
+                      className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-[#edf0ed] p-4"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold">
+                          {item.title}
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-[#829087]">
+                          {item.description}
+                        </p>
+                      </div>
+
+                      <input
+                        type="checkbox"
+                        checked={notifications[item.key]}
+                        onChange={(event) =>
+                          setNotifications({
+                            ...notifications,
+                            [item.key]: event.target.checked,
+                          })
+                        }
+                        className="h-4 w-4 accent-[#34834e]"
+                      />
+                    </label>
+                  ))}
+                </div>
+
+                <p className="mt-5 text-xs text-[#829087]">
+                  These preferences are currently stored only in page state.
+                </p>
+              </>
+            )}
+
+            {settingsTab === "Security" && (
+              <>
+                <h2 className="text-lg font-bold">Security settings</h2>
+                <p className="mt-1 text-sm text-[#829087]">
+                  Security controls will be connected to your account backend.
+                </p>
+
+                <div className="mt-6 flex items-start gap-3 rounded-xl border border-[#edf0ed] p-4">
+                  <ShieldCheck
+                    size={22}
+                    className="shrink-0 text-[#34834e]"
+                  />
+
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold">
+                      Two-factor authentication
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-[#829087]">
+                      This visual setting does not activate real two-factor
+                      authentication.
+                    </p>
+                  </div>
+
+                  <input
+                    type="checkbox"
+                    checked={securitySettings.twoFactor}
+                    onChange={(event) =>
+                      setSecuritySettings({
+                        ...securitySettings,
+                        twoFactor: event.target.checked,
+                      })
+                    }
+                    className="mt-1 h-4 w-4 accent-[#34834e]"
+                    aria-label="Toggle two-factor authentication preview"
+                  />
+                </div>
+
+                <div className="mt-4 flex items-start gap-3 rounded-xl bg-amber-50 p-4 text-xs leading-5 text-amber-800">
+                  <AlertCircle size={18} className="mt-0.5 shrink-0" />
+                  Security checks must be enforced by the backend.
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      </div>
-    </section>
-  )
-);
+      </section>
+    )
+  );
   const renderOrderPreview = () => (
     <section className={pageClass}>
       <div className="mx-auto max-w-3xl">
