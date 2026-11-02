@@ -4,6 +4,7 @@ import {
     useEffect,
     useState
 } from "react";
+import { backendUrl } from "../constants/backendUrl";
 
 const MarketContext = createContext();
 
@@ -14,7 +15,7 @@ const [exchangeRate, setExchangeRate] = useState(null);
 const fetchExchangeRate = async () => {
     try {
         const response = await fetch(
-            "http://localhost:8000/currency/usd-ngn"
+            `${backendUrl}/currency/usd-ngn`
         );
 
         const data = await response.json();

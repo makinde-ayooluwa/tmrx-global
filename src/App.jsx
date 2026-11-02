@@ -41,6 +41,7 @@ import Swal from "sweetalert2";
 import { useMarket } from "./contexts/marketProvider";
 import PaystackCheckout from "./components/paystackCheckout";
 import axios from "axios";
+import { backendUrl } from "./constants/backendUrl";
 
 const navigation = [
   { label: "Dashboard", icon: LayoutDashboard },
@@ -156,12 +157,14 @@ function App() {
   const [authError, setAuthError] = useState("");
   const [authSuccess, setAuthSuccess] = useState("");
   const [auth, setAuth] = useState("");
-  const verifyPayment = async(reference)=>{
-try {
-  const response = await axios.post();
-} catch (error) {
-  
-}
+  const verifyPayment = async (reference) => {
+    try {
+      const response = await axios.post(`${backendUrl}/payment/verify`, { reference });
+      const result = response.data;
+      console.log(result)
+    } catch (error) {
+      console.log(error);
+    }
   }
   const switchAuth = (next) => {
     setAuth(next);
@@ -524,138 +527,137 @@ try {
 
 
   // Define coinDetails outside the component/function to keep it clean and performant
-const coinDetailsConfig = {
-  BTCUSDT: {
-    name: "Bitcoin",
-    icon: "₿",
-    color: "bg-orange-100 text-orange-600"
-  },
-  ETHUSDT: {
-    name: "Ethereum",
-    icon: "Ξ",
-    color: "bg-indigo-100 text-indigo-600"
-  },
-  // Change this key to match whatever your API is actually sending for Tether!
-  USDCUSDT: { 
-    name: "Tether",
-    icon: "₮",
-    color: "bg-green-100 text-green-600"
-  }
-};
-const renderMarketCards = () => (
-  <div>
-    {!connected && (
-      <p className="mb-4 text-xs text-amber-600">
-        Reconnecting to live market data...
-      </p>
-    )}
+  const coinDetailsConfig = {
+    BTCUSDT: {
+      name: "Bitcoin",
+      icon: "₿",
+      color: "bg-orange-100 text-orange-600"
+    },
+    ETHUSDT: {
+      name: "Ethereum",
+      icon: "Ξ",
+      color: "bg-indigo-100 text-indigo-600"
+    },
+    // Change this key to match whatever your API is actually sending for Tether!
+    USDCUSDT: {
+      name: "Tether",
+      icon: "₮",
+      color: "bg-green-100 text-green-600"
+    }
+  };
+  const renderMarketCards = () => (
+    <div>
+      {!connected && (
+        <p className="mb-4 text-xs text-amber-600">
+          Reconnecting to live market data...
+        </p>
+      )}
 
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-      {markets
-        .filter((coin) => coinDetailsConfig[coin.symbol])
-        .map((coin) => {
-          const change = Number(coin.price24hPcnt) * 100;
-          const positive = change >= 0;
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {markets
+          .filter((coin) => coinDetailsConfig[coin.symbol])
+          .map((coin) => {
+            const change = Number(coin.price24hPcnt) * 100;
+            const positive = change >= 0;
 
-          const details = coinDetailsConfig[coin.symbol] || {
-            name: coin.symbol,
-            icon: coin.symbol.charAt(0),
-            color: "bg-gray-100 text-gray-600"
-          };
+            const details = coinDetailsConfig[coin.symbol] || {
+              name: coin.symbol,
+              icon: coin.symbol.charAt(0),
+              color: "bg-gray-100 text-gray-600"
+            };
 
-          const dollarPrice = Number(coin.lastPrice);
+            const dollarPrice = Number(coin.lastPrice);
 
-          const nairaPrice = exchangeRate !== null
-            ? dollarPrice * exchangeRate
-            : null;
+            const nairaPrice = exchangeRate !== null
+              ? dollarPrice * exchangeRate
+              : null;
 
-          const formattedNaira = nairaPrice !== null
-            ? `₦${nairaPrice.toLocaleString("en-NG", {
+            const formattedNaira = nairaPrice !== null
+              ? `₦${nairaPrice.toLocaleString("en-NG", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
               })}`
-            : "Loading rate...";
+              : "Loading rate...";
 
-          const formattedDollar = `$${dollarPrice.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 8
-          })}`;
+            const formattedDollar = `$${dollarPrice.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 8
+            })}`;
 
-          return (
-            <div
-              key={coin.symbol}
-              className="rounded-2xl border border-[#e7ece8] bg-white p-5 transition hover:border-[#b6d9bf]"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold ${details.color}`}
-                  >
-                    {details.icon}
+            return (
+              <div
+                key={coin.symbol}
+                className="rounded-2xl border border-[#e7ece8] bg-white p-5 transition hover:border-[#b6d9bf]"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold ${details.color}`}
+                    >
+                      {details.icon}
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-bold">
+                        {details.name}
+                      </h3>
+
+                      <p className="mt-1 text-xs text-[#829087]">
+                        {coin.symbol}
+                      </p>
+                    </div>
                   </div>
 
-                  <div>
-                    <h3 className="text-sm font-bold">
-                      {details.name}
-                    </h3>
-
-                    <p className="mt-1 text-xs text-[#829087]">
-                      {coin.symbol}
-                    </p>
-                  </div>
+                  {positive ? (
+                    <TrendingUp
+                      size={19}
+                      className="text-emerald-600"
+                    />
+                  ) : (
+                    <TrendingDown
+                      size={19}
+                      className="text-red-500"
+                    />
+                  )}
                 </div>
 
-                {positive ? (
-                  <TrendingUp
-                    size={19}
-                    className="text-emerald-600"
-                  />
-                ) : (
-                  <TrendingDown
-                    size={19}
-                    className="text-red-500"
-                  />
-                )}
+                {/* Naira price */}
+                <p className="mt-6 text-xl font-bold tracking-tight">
+                  {formattedNaira}
+                </p>
+
+                {/* Dollar price */}
+                <p className="mt-1 text-xs text-[#829087]">
+                  {formattedDollar} USD
+                </p>
+
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <span className="text-xs text-[#829087]">
+                    24h change
+                  </span>
+
+                  <span
+                    className={`rounded-md px-2 py-1 text-xs font-semibold ${positive
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-red-50 text-red-600"
+                      }`}
+                  >
+                    {positive ? "+" : ""}
+                    {change.toFixed(2)}%
+                  </span>
+                </div>
               </div>
+            );
+          })}
+      </div>
 
-              {/* Naira price */}
-              <p className="mt-6 text-xl font-bold tracking-tight">
-                {formattedNaira}
-              </p>
-
-              {/* Dollar price */}
-              <p className="mt-1 text-xs text-[#829087]">
-                {formattedDollar} USD
-              </p>
-
-              <div className="mt-3 flex items-center justify-between gap-2">
-                <span className="text-xs text-[#829087]">
-                  24h change
-                </span>
-
-                <span
-                  className={`rounded-md px-2 py-1 text-xs font-semibold ${
-                    positive
-                      ? "bg-emerald-50 text-emerald-700"
-                      : "bg-red-50 text-red-600"
-                  }`}
-                >
-                  {positive ? "+" : ""}
-                  {change.toFixed(2)}%
-                </span>
-              </div>
-            </div>
-          );
-        })}
+      {markets.length === 0 && (
+        <p className="py-8 text-center text-sm text-gray-500">
+          Waiting for market data...
+        </p>
+      )}
     </div>
-
-    {markets.length === 0 && (
-      <p className="py-8 text-center text-sm text-gray-500">
-        Waiting for market data...
-      </p>
-    )}
-  </div>
-);
+  );
   const renderTradeForm = () => {
     const selectedMarket = markets.find(
       (coin) => coin.symbol === `${selectedCoin}USDT`
@@ -713,8 +715,8 @@ const renderMarketCards = () => (
                 key={type}
                 onClick={() => setTradeType(type)}
                 className={`rounded-lg py-3 text-sm font-semibold capitalize transition ${tradeType === type
-                    ? "bg-[#153c2a] text-white shadow-sm"
-                    : "text-[#829087] hover:text-[#17251e]"
+                  ? "bg-[#153c2a] text-white shadow-sm"
+                  : "text-[#829087] hover:text-[#17251e]"
                   }`}
               >
                 {type === "buy" ? "Buy Crypto" : "Sell Crypto"}
@@ -1339,8 +1341,8 @@ const renderMarketCards = () => (
                 key={label}
                 onClick={() => setSettingsTab(label)}
                 className={`flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium transition ${settingsTab === label
-                    ? "bg-[#edf8ef] text-[#245b3b]"
-                    : "text-[#64786a] hover:bg-gray-50"
+                  ? "bg-[#edf8ef] text-[#245b3b]"
+                  : "text-[#64786a] hover:bg-gray-50"
                   }`}
               >
                 <Icon size={19} />
@@ -2330,9 +2332,9 @@ const renderMarketCards = () => (
                 >
                   Close
                 </button>
-{walletAction == "Add Funds" && <PaystackCheckout email={userData.email} amountInNaira={actionAmount} onSuccessCallback={verifyPayment} />}
+                {walletAction == "Add Funds" && <PaystackCheckout email={userData.email} amountInNaira={actionAmount} onSuccessCallback={verifyPayment} />}
+                {walletAction == "Withdraw" && <button className="w-full rounded-xl bg-emerald-600 py-3 font-semibold text-white transition hover:bg-emerald-700">Withdraw NGN {actionAmount.toLocaleString()}</button>}
 
-                
               </div>
             </form>
           </div>
