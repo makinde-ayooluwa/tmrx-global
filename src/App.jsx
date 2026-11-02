@@ -40,6 +40,7 @@ import { useUser } from "./contexts/userProvider";
 import Swal from "sweetalert2";
 import { useMarket } from "./contexts/marketProvider";
 import PaystackCheckout from "./components/paystackCheckout";
+import axios from "axios";
 
 const navigation = [
   { label: "Dashboard", icon: LayoutDashboard },
@@ -156,7 +157,11 @@ function App() {
   const [authSuccess, setAuthSuccess] = useState("");
   const [auth, setAuth] = useState("");
   const verifyPayment = async(reference)=>{
-
+try {
+  const response = await axios.post();
+} catch (error) {
+  
+}
   }
   const switchAuth = (next) => {
     setAuth(next);
@@ -2325,8 +2330,9 @@ const renderMarketCards = () => (
                 >
                   Close
                 </button>
+{walletAction == "Add Funds" && <PaystackCheckout email={userData.email} amountInNaira={actionAmount} onSuccessCallback={verifyPayment} />}
 
-                <PaystackCheckout email={userData.email} amountInNaira={actionAmount} onSuccessCallback={verifyPayment} />
+                
               </div>
             </form>
           </div>
