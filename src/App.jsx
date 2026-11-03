@@ -159,43 +159,102 @@ function App() {
   const [authSuccess, setAuthSuccess] = useState("");
   const [auth, setAuth] = useState("");
   const [transactions, setTransactions] = useState([]);
-const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const transactionsPerPage = 10;
+  
+  const exportTransactions = () => {
+    if (transactions.length === 0) {
+      Swal.fire({
+        icon: "info",
+        title: "No transactions",
+        text: "You don't have any transactions to export yet."
+      });
+      return;
+    }
 
-const getTransactionHistory = async () => {
+    const headers = [
+      "Reference",
+      "Type",
+      "Amount (NGN)",
+      "Currency",
+      "Status",
+      "Date"
+    ];
+
+    const rows = transactions.map((transaction) => [
+      transaction.reference,
+      transaction.type,
+      transaction.amount,
+      transaction.currency,
+      transaction.status,
+      new Date(transaction.date).toLocaleString("en-NG")
+    ]);
+
+    const csvContent = [
+      headers,
+      ...rows
+    ]
+      .map((row) =>
+        row.map((value) =>
+          `"${String(value ?? "").replace(/"/g, '""')}"`
+        ).join(",")
+      )
+      .join("\n");
+
+    const blob = new Blob(
+      ["\uFEFF" + csvContent],
+      { type: "text/csv;charset=utf-8;" }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "tmrx-global-transactions.csv";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+  };
+  const getTransactionHistory = async () => {
     try {
-        setTransactionsLoading(true);
+      setTransactionsLoading(true);
 
-        const response = await axios.get(
-            `${backendUrl}/payment/history`,
-            {
-                headers: {
-                    Authorization: `Bearer ${sessionStorage.getItem("authToken")}`
-                }
-            }
-        );
-
-        const result = response.data;
-
-        if (result.status) {
-            setTransactions(result.data);
+      const response = await axios.get(
+        `${backendUrl}/payment/history`,
+        {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("authToken")}`
+          }
         }
+      );
+
+      const result = response.data;
+
+      if (result.status) {
+        setTransactions(result.data);
+      }
 
     } catch (error) {
-        console.error(
-            "Transaction history error:",
-            error.response?.data?.message || error.message
-        );
+      console.error(
+        "Transaction history error:",
+        error.response?.data?.message || error.message
+      );
     } finally {
-        setTransactionsLoading(false);
+      setTransactionsLoading(false);
     }
-};
-useEffect(() => {
+  };
+  useEffect(() => {
     if (user) {
-        getTransactionHistory();
+      getTransactionHistory();
     } else {
-        setTransactions([]);
+      setTransactions([]);
     }
-}, [user]);
+  }, [user]);
+  
   const verifyPayment = async (reference) => {
     try {
       const response = await axios.post(
@@ -216,7 +275,7 @@ useEffect(() => {
 
       // Immediately update wallet information
       editUser(result.data.user);
-await getTransactionHistory();
+      await getTransactionHistory();
       // Show success notification
       await Swal.fire({
         icon: "success",
@@ -459,7 +518,9 @@ await getTransactionHistory();
     security: true,
     market: false,
   });
-
+useEffect(() => {
+    setCurrentPage(1);
+}, [transactionSearch, transactionFilter]);
   const [securitySettings, setSecuritySettings] = useState({
     twoFactor: false,
   });
@@ -1000,32 +1061,41 @@ await getTransactionHistory();
 
   const filteredTransactions = transactions
     .map((transaction) => ({
-        id: transaction.reference,
-        type: transaction.type,
-        description: `${transaction.type} via Paystack`,
-        date: new Date(transaction.date).toLocaleString("en-NG"),
-        amount: Number(transaction.amount),
-        status: transaction.status === "success"
-            ? "Completed"
-            : transaction.status,
+      id: transaction.reference,
+      type: transaction.type,
+      description: `${transaction.type} via Paystack`,
+      date: new Date(transaction.date).toLocaleString("en-NG"),
+      amount: Number(transaction.amount),
+      status: transaction.status === "success"
+        ? "Completed"
+        : transaction.status,
     }))
     .filter((transaction) => {
-        const matchesSearch =
-            transaction.id.toLowerCase().includes(
-                transactionSearch.toLowerCase()
-            ) ||
-            transaction.description.toLowerCase().includes(
-                transactionSearch.toLowerCase()
-            );
+      const matchesSearch =
+        transaction.id.toLowerCase().includes(
+          transactionSearch.toLowerCase()
+        ) ||
+        transaction.description.toLowerCase().includes(
+          transactionSearch.toLowerCase()
+        );
 
-        const matchesFilter =
-            transactionFilter === "All" ||
-            transaction.type.toLowerCase() ===
-            transactionFilter.toLowerCase();
+      const matchesFilter =
+        transactionFilter === "All" ||
+        transaction.type.toLowerCase() ===
+        transactionFilter.toLowerCase();
 
-        return matchesSearch && matchesFilter;
+      return matchesSearch && matchesFilter;
     });
+  const totalPages = Math.ceil(
+    filteredTransactions.length / transactionsPerPage
+  );
 
+  const startIndex = (currentPage - 1) * transactionsPerPage;
+
+  const currentTransactions = filteredTransactions.slice(
+    startIndex,
+    startIndex + transactionsPerPage
+  );
   const renderDashboard = () => (
     <section className={pageClass}>
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
@@ -1247,9 +1317,7 @@ await getTransactionHistory();
 
           <button
             onClick={() =>
-              setActionMessage(
-                "Export will be available when real transaction records are connected."
-              )
+              exportTransactions()
             }
             className="inline-flex items-center gap-2 rounded-xl border border-[#dfe7e1] bg-white px-4 py-3 text-sm font-semibold hover:bg-gray-50"
           >
@@ -1297,21 +1365,21 @@ await getTransactionHistory();
           </div>
 
           <div className="mt-5 flex items-center justify-between">
-    <p className="text-xs text-[#829087]">
-        Your actual account transactions
-    </p>
+            <p className="text-xs text-[#829087]">
+              Your actual account transactions
+            </p>
 
-    <button
-        onClick={getTransactionHistory}
-        disabled={transactionsLoading}
-        className="text-xs font-semibold text-[#348a56] hover:underline disabled:opacity-50"
-    >
-        {transactionsLoading ? "Refreshing..." : "Refresh"}
-    </button>
-</div>
+            <button
+              onClick={getTransactionHistory}
+              disabled={transactionsLoading}
+              className="text-xs font-semibold text-[#348a56] hover:underline disabled:opacity-50"
+            >
+              {transactionsLoading ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
 
           <div className="mt-6 space-y-3">
-            {filteredTransactions.map((transaction) => (
+            {currentTransactions.map((transaction) => (
               <div
                 key={transaction.id}
                 className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#edf0ed] p-4"
@@ -1361,18 +1429,41 @@ await getTransactionHistory();
             ))}
 
             {filteredTransactions.length === 0 && (
-            <div className="py-10 text-center">
+              <div className="py-10 text-center">
                 <History size={28} className="mx-auto text-[#a1ada4]" />
 
                 <p className="mt-3 text-sm font-semibold">
-                    No matching transactions
+                  No matching transactions
                 </p>
 
                 <p className="mt-1 text-xs text-[#829087]">
-                    Try another search term or filter.
+                  Try another search term or filter.
                 </p>
-            </div>
-        )}
+              </div>
+            )}
+            {totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-between">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Previous
+                </button>
+
+                <span className="text-sm text-gray-600">
+                  Page {currentPage} of {totalPages}
+                </span>
+
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </section>
