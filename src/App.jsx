@@ -162,7 +162,7 @@ function App() {
   const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const transactionsPerPage = 10;
-  
+
   const exportTransactions = () => {
     if (transactions.length === 0) {
       Swal.fire({
@@ -254,7 +254,7 @@ function App() {
       setTransactions([]);
     }
   }, [user]);
-  
+
   const verifyPayment = async (reference) => {
     try {
       const response = await axios.post(
@@ -518,9 +518,9 @@ function App() {
     security: true,
     market: false,
   });
-useEffect(() => {
+  useEffect(() => {
     setCurrentPage(1);
-}, [transactionSearch, transactionFilter]);
+  }, [transactionSearch, transactionFilter]);
   const [securitySettings, setSecuritySettings] = useState({
     twoFactor: false,
   });
