@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   ArrowLeftRight,
@@ -133,6 +133,7 @@ function App() {
     verifyResetCode,
     resetPassword,
     resendVerificationCode,
+    editUser
   } = useUser();
   const { markets, connected, exchangeRate } = useMarket();
   // Authentication state
@@ -157,15 +158,90 @@ function App() {
   const [authError, setAuthError] = useState("");
   const [authSuccess, setAuthSuccess] = useState("");
   const [auth, setAuth] = useState("");
+  const [transactions, setTransactions] = useState([]);
+const [transactionsLoading, setTransactionsLoading] = useState(false);
+
+const getTransactionHistory = async () => {
+    try {
+        setTransactionsLoading(true);
+
+        const response = await axios.get(
+            `${backendUrl}/payment/history`,
+            {
+                headers: {
+                    Authorization: `Bearer ${sessionStorage.getItem("authToken")}`
+                }
+            }
+        );
+
+        const result = response.data;
+
+        if (result.status) {
+            setTransactions(result.data);
+        }
+
+    } catch (error) {
+        console.error(
+            "Transaction history error:",
+            error.response?.data?.message || error.message
+        );
+    } finally {
+        setTransactionsLoading(false);
+    }
+};
+useEffect(() => {
+    if (user) {
+        getTransactionHistory();
+    } else {
+        setTransactions([]);
+    }
+}, [user]);
   const verifyPayment = async (reference) => {
     try {
-      const response = await axios.post(`${backendUrl}/payment/verify`, { reference });
+      const response = await axios.post(
+        `${backendUrl}/payment/verify`,
+        { reference },
+        {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("authToken")}`
+          }
+        }
+      );
+
       const result = response.data;
-      console.log(result)
+
+      if (!result.status) {
+        throw new Error(result.message);
+      }
+
+      // Immediately update wallet information
+      editUser(result.data.user);
+await getTransactionHistory();
+      // Show success notification
+      await Swal.fire({
+        icon: "success",
+        title: "Payment Successful!",
+        text: `₦${Number(result.data.amount).toLocaleString("en-NG")} has been added to your wallet.`,
+        confirmButtonColor: "#059669"
+      });
+
+      // Close wallet modal
+      closeWalletAction();
+
+      return result;
+
     } catch (error) {
-      console.log(error);
+      console.error("Payment verification failed:", error);
+
+      Swal.fire({
+        icon: "error",
+        title: "Verification Failed",
+        text: error.response?.data?.message || error.message
+      });
+
+      throw error;
     }
-  }
+  };
   const switchAuth = (next) => {
     setAuth(next);
     setAuthError("");
@@ -638,8 +714,8 @@ function App() {
 
                   <span
                     className={`rounded-md px-2 py-1 text-xs font-semibold ${positive
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "bg-red-50 text-red-600"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-red-50 text-red-600"
                       }`}
                   >
                     {positive ? "+" : ""}
@@ -922,22 +998,33 @@ function App() {
   };
 
 
-  const filteredTransactions = sampleTransactions.filter(
-    (transaction) => {
-      const matchesFilter =
-        transactionFilter === "All" ||
-        transaction.type === transactionFilter;
+  const filteredTransactions = transactions
+    .map((transaction) => ({
+        id: transaction.reference,
+        type: transaction.type,
+        description: `${transaction.type} via Paystack`,
+        date: new Date(transaction.date).toLocaleString("en-NG"),
+        amount: Number(transaction.amount),
+        status: transaction.status === "success"
+            ? "Completed"
+            : transaction.status,
+    }))
+    .filter((transaction) => {
+        const matchesSearch =
+            transaction.id.toLowerCase().includes(
+                transactionSearch.toLowerCase()
+            ) ||
+            transaction.description.toLowerCase().includes(
+                transactionSearch.toLowerCase()
+            );
 
-      const search = transactionSearch.toLowerCase();
+        const matchesFilter =
+            transactionFilter === "All" ||
+            transaction.type.toLowerCase() ===
+            transactionFilter.toLowerCase();
 
-      const matchesSearch =
-        transaction.id.toLowerCase().includes(search) ||
-        transaction.description.toLowerCase().includes(search) ||
-        transaction.type.toLowerCase().includes(search);
-
-      return matchesFilter && matchesSearch;
-    }
-  );
+        return matchesSearch && matchesFilter;
+    });
 
   const renderDashboard = () => (
     <section className={pageClass}>
@@ -1209,10 +1296,19 @@ function App() {
             </div>
           </div>
 
-          <div className="mt-5 flex items-start gap-3 rounded-xl bg-amber-50 p-4 text-xs leading-5 text-amber-800">
-            <Info size={17} className="mt-0.5 shrink-0" />
-            These are fictional examples for testing the interface, not actual account records.
-          </div>
+          <div className="mt-5 flex items-center justify-between">
+    <p className="text-xs text-[#829087]">
+        Your actual account transactions
+    </p>
+
+    <button
+        onClick={getTransactionHistory}
+        disabled={transactionsLoading}
+        className="text-xs font-semibold text-[#348a56] hover:underline disabled:opacity-50"
+    >
+        {transactionsLoading ? "Refreshing..." : "Refresh"}
+    </button>
+</div>
 
           <div className="mt-6 space-y-3">
             {filteredTransactions.map((transaction) => (
@@ -1265,19 +1361,18 @@ function App() {
             ))}
 
             {filteredTransactions.length === 0 && (
-              <div className="py-10 text-center">
-                <History
-                  size={28}
-                  className="mx-auto text-[#a1ada4]"
-                />
+            <div className="py-10 text-center">
+                <History size={28} className="mx-auto text-[#a1ada4]" />
+
                 <p className="mt-3 text-sm font-semibold">
-                  No matching transactions
+                    No matching transactions
                 </p>
+
                 <p className="mt-1 text-xs text-[#829087]">
-                  Try another search term or filter.
+                    Try another search term or filter.
                 </p>
-              </div>
-            )}
+            </div>
+        )}
           </div>
         </div>
       </section>
@@ -2332,7 +2427,14 @@ function App() {
                 >
                   Close
                 </button>
-                {walletAction == "Add Funds" && <PaystackCheckout email={userData.email} amountInNaira={actionAmount} onSuccessCallback={verifyPayment} />}
+                {walletAction === "Add Funds" && (
+                  <PaystackCheckout
+                    email={userData.email}
+                    userId={user}
+                    amountInNaira={actionAmount}
+                    onSuccessCallback={verifyPayment}
+                  />
+                )}
                 {walletAction == "Withdraw" && <button className="w-full rounded-xl bg-emerald-600 py-3 font-semibold text-white transition hover:bg-emerald-700">Withdraw NGN {actionAmount.toLocaleString()}</button>}
 
               </div>

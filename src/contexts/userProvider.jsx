@@ -110,32 +110,21 @@ export const UserProvider = ({ children }) => {
             result.user ||
             result.data?.userData ||
             result.data?.user ||
-            (
-                result.data &&
-                    typeof result.data === "object"
-                    ? result.data
-                    : null
-            );
+            result.data;
 
         const userId =
             account?._id ||
             account?.id ||
-            result.userId ||
             result._id ||
-            result.data?._id ||
-            (
-                typeof result.user === "string"
-                    ? result.user
-                    : null
-            );
+            result.userId;
 
-        if (!userId) {
-            throw new Error(
-                "Login succeeded, but no user ID was found in the response. Check your /auth/login response."
-            );
+        if (!userId || !result.token) {
+            throw new Error("Login failed. Missing user ID or session token.");
         }
 
         sessionStorage.setItem("user", String(userId));
+        sessionStorage.setItem("authToken", result.token);
+
         setUser(String(userId));
 
         return result;
@@ -197,13 +186,31 @@ export const UserProvider = ({ children }) => {
             password,
         });
     };
+    // Update the user context with data returned by the backend.
+    const editUser = (updatedUser) => {
+        if (!updatedUser || typeof updatedUser !== "object") {
+            throw new Error("Invalid user data received.");
+        }
 
+        const updatedUserId = updatedUser._id || updatedUser.id;
+
+        if (updatedUserId && String(updatedUserId) !== String(user)) {
+            throw new Error("The returned user does not match the logged-in account.");
+        }
+
+        setUserData((previousUser) => ({
+            ...previousUser,
+            ...updatedUser,
+        }));
+    };
     // Log out the current user.
     const logout = () => {
-        sessionStorage.removeItem("user");
-        setUser(null);
-        setUserData(null);
-    };
+    sessionStorage.removeItem("user");
+    sessionStorage.removeItem("authToken");
+
+    setUser(null);
+    setUserData(null);
+};
 
     return (
         <UserContext.Provider
@@ -215,6 +222,7 @@ export const UserProvider = ({ children }) => {
                 register,
                 login,
                 logout,
+                editUser,
 
                 resendVerificationCode,
                 forgotPassword,

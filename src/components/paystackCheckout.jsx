@@ -1,35 +1,79 @@
-import React from 'react';
-import { usePaystackPayment } from 'react-paystack';
+import React, { useState } from "react";
+import { usePaystackPayment } from "react-paystack";
 
-const PaystackCheckout = ({ email, amountInNaira, onSuccessCallback }) => {
-  // Paystack expects the amount in kobo (multiply Naira by 100)
-  const config = {
-    reference: `TX_TMRX_GLOBAL-${(new Date()).getTime().toString()}`,
-    email: email,
-    amount: Math.round(amountInNaira * 100), // e.g., ₦5,000 = 500000 kobo
-    publicKey: "pk_test_f912c77684d9e667cd987c1dce2945b290973a9a",
-  };
+const PaystackCheckout = ({
+    email,
+    amountInNaira,
+    userId,
+    onSuccessCallback,
+}) => {
+    const [verifying, setVerifying] = useState(false);
 
-  const initializePayment = usePaystackPayment(config);
+    const amount = Number(amountInNaira);
 
-  const onSuccess = (reference) => {
-    // Call your backend here to verify the transaction and fulfill the order
-    console.log("Payment successful! Reference:", reference);
-    onSuccessCallback(reference);
-  };
+    const config = {
+        reference: `TX_TMRX_GLOBAL-${Date.now()}-${Math.floor(
+            Math.random() * 1000000
+        )}`,
+        email,
+        amount: Math.round(amount * 100),
+        publicKey: "pk_test_f912c77684d9e667cd987c1dce2945b290973a9a",
+        currency: "NGN",
+        metadata: {
+            userId: String(userId),
+        },
+    };
 
-  const onClose = () => {
-    console.log("Payment closed.");
-  };
+    const initializePayment = usePaystackPayment(config);
 
-  return (
-    <button
-      onClick={() => initializePayment({ onSuccess, onClose })}
-      className="w-full rounded-xl bg-emerald-600 py-3 font-semibold text-white transition hover:bg-emerald-700"
-    >
-      Pay ₦{amountInNaira.toLocaleString()} with Paystack
-    </button>
-  );
+    const onSuccess = async (response) => {
+        const reference =
+            typeof response === "string"
+                ? response
+                : response?.reference;
+
+        if (!reference) {
+            return;
+        }
+
+        setVerifying(true);
+
+        try {
+            await onSuccessCallback(reference);
+        } catch (error) {
+            console.error("Payment verification failed:", error);
+        } finally {
+            setVerifying(false);
+        }
+    };
+
+    const onClose = () => {
+        console.log("Paystack checkout closed.");
+    };
+
+    const handlePayment = () => {
+        if (!email || !userId || !Number.isFinite(amount) || amount <= 0) {
+            return;
+        }
+
+        initializePayment({
+            onSuccess,
+            onClose,
+        });
+    };
+
+    return (
+        <button
+            type="button"
+            onClick={handlePayment}
+            disabled={verifying || !email || !userId || amount <= 0}
+            className="w-full rounded-xl bg-emerald-600 py-3 font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+            {verifying
+                ? "Verifying payment..."
+                : `Pay ₦${amount.toLocaleString("en-NG")} with Paystack`}
+        </button>
+    );
 };
 
 export default PaystackCheckout;
