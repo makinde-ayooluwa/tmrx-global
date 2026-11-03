@@ -161,10 +161,74 @@ function App() {
   const [transactions, setTransactions] = useState([]);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [orderTransactions, setOrderTransactions] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const transactionsPerPage = 10;
 
+  const getOrderHistory = async () => {
+    try {
+      setOrdersLoading(true);
+
+      const response = await axios.get(`${backendUrl}/order/history`, {
+        headers: {
+          Authorization: `Bearer ${sessionStorage.getItem("authToken")}`
+        }
+      });
+
+      const result = response.data;
+      if (result.status) {
+        setOrderTransactions(Array.isArray(result.data) ? result.data : []);
+      }
+    } catch (error) {
+      console.error(
+        "Order history error:",
+        error.response?.data?.message || error.message
+      );
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  const getTransactionHistory = async () => {
+    try {
+      setTransactionsLoading(true);
+
+      const response = await axios.get(`${backendUrl}/payment/history`, {
+        headers: {
+          Authorization: `Bearer ${sessionStorage.getItem("authToken")}`
+        }
+      });
+
+      const result = response.data;
+      if (result.status) {
+        setTransactions(Array.isArray(result.data) ? result.data : []);
+      }
+    } catch (error) {
+      console.error(
+        "Transaction history error:",
+        error.response?.data?.message || error.message
+      );
+    } finally {
+      setTransactionsLoading(false);
+    }
+  };
+
+  const refreshAllTransactions = async () => {
+    await Promise.all([getTransactionHistory(), getOrderHistory()]);
+  };
+
+  useEffect(() => {
+    if (user) {
+      refreshAllTransactions();
+    } else {
+      setTransactions([]);
+      setOrderTransactions([]);
+      setCurrentPage(1);
+    }
+  }, [user]);
+
   const exportTransactions = () => {
-    if (transactions.length === 0) {
+    if (allTransactions.length === 0) {
       Swal.fire({
         icon: "info",
         title: "No transactions",
@@ -176,85 +240,50 @@ function App() {
     const headers = [
       "Reference",
       "Type",
-      "Amount (NGN)",
+      "Description",
+      "Coin",
+      "Coin Amount",
+      "Order Amount (NGN)",
+      "Processing Fee (NGN)",
+      "Final Amount (NGN)",
       "Currency",
       "Status",
       "Date"
     ];
 
-    const rows = transactions.map((transaction) => [
-      transaction.reference,
+    const rows = allTransactions.map((transaction) => [
+      transaction.id,
       transaction.type,
+      transaction.description,
+      transaction.coin || "",
+      transaction.coinAmount || "",
+      transaction.orderAmount ?? "",
+      transaction.processingFee ?? "",
       transaction.amount,
       transaction.currency,
       transaction.status,
-      new Date(transaction.date).toLocaleString("en-NG")
+      transaction.date
     ]);
 
-    const csvContent = [
-      headers,
-      ...rows
-    ]
+    const csvContent = [headers, ...rows]
       .map((row) =>
-        row.map((value) =>
-          `"${String(value ?? "").replace(/"/g, '""')}"`
-        ).join(",")
+        row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")
       )
       .join("\n");
 
-    const blob = new Blob(
-      ["\uFEFF" + csvContent],
-      { type: "text/csv;charset=utf-8;" }
-    );
+    const blob = new Blob(["\uFEFF" + csvContent], {
+      type: "text/csv;charset=utf-8;"
+    });
 
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-
     link.href = url;
     link.download = "tmrx-global-transactions.csv";
-
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
     URL.revokeObjectURL(url);
   };
-  const getTransactionHistory = async () => {
-    try {
-      setTransactionsLoading(true);
-
-      const response = await axios.get(
-        `${backendUrl}/payment/history`,
-        {
-          headers: {
-            Authorization: `Bearer ${sessionStorage.getItem("authToken")}`
-          }
-        }
-      );
-
-      const result = response.data;
-
-      if (result.status) {
-        setTransactions(result.data);
-      }
-
-    } catch (error) {
-      console.error(
-        "Transaction history error:",
-        error.response?.data?.message || error.message
-      );
-    } finally {
-      setTransactionsLoading(false);
-    }
-  };
-  useEffect(() => {
-    if (user) {
-      getTransactionHistory();
-    } else {
-      setTransactions([]);
-    }
-  }, [user]);
-
   const verifyPayment = async (reference) => {
     try {
       const response = await axios.post(
@@ -1059,43 +1088,73 @@ function App() {
   };
 
 
-  const filteredTransactions = transactions
-    .map((transaction) => ({
-      id: transaction.reference,
-      type: transaction.type,
-      description: `${transaction.type} via Paystack`,
-      date: new Date(transaction.date).toLocaleString("en-NG"),
-      amount: Number(transaction.amount),
-      status: transaction.status === "success"
-        ? "Completed"
-        : transaction.status,
-    }))
-    .filter((transaction) => {
-      const matchesSearch =
-        transaction.id.toLowerCase().includes(
-          transactionSearch.toLowerCase()
-        ) ||
-        transaction.description.toLowerCase().includes(
-          transactionSearch.toLowerCase()
-        );
 
-      const matchesFilter =
-        transactionFilter === "All" ||
-        transaction.type.toLowerCase() ===
-        transactionFilter.toLowerCase();
+  const allTransactions = [
+    ...transactions.map((transaction) => {
+      const date = new Date(transaction.date);
+      const validDate = !Number.isNaN(date.getTime());
+
+      return {
+        id: transaction.reference,
+        type: "Deposit",
+        description: "Wallet deposit via Paystack",
+        amount: Number(transaction.amount),
+        currency: transaction.currency || "NGN",
+        status: String(transaction.status).toLowerCase() === "success"
+          ? "Completed"
+          : transaction.status,
+        date: validDate ? date.toLocaleString("en-NG") : "Date unavailable",
+        timestamp: validDate ? date.getTime() : 0
+      };
+    }),
+    ...orderTransactions.map((order) => {
+      const date = new Date(order.date);
+      const validDate = !Number.isNaN(date.getTime());
+      const type = String(order.type || "").toLowerCase();
+
+      return {
+        id: order.reference,
+        type,
+        description: `${order.coinAmount} ${order.coin} ${type} order`,
+        amount: Number(order.finalAmount),
+        currency: "NGN",
+        status: order.status,
+        date: validDate ? date.toLocaleString("en-NG") : "Date unavailable",
+        timestamp: validDate ? date.getTime() : 0,
+        orderAmount: Number(order.orderAmount),
+        processingFee: Number(order.processingFee),
+        processingFeeRate: Number(order.processingFeeRate ?? 0.03),
+        coin: order.coin,
+        coinAmount: String(order.coinAmount)
+      };
+    })
+  ];
+
+  const filteredTransactions = allTransactions
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .filter((transaction) => {
+      const search = transactionSearch.trim().toLowerCase();
+      const searchableText = [
+        transaction.id,
+        transaction.description,
+        transaction.type,
+        transaction.coin || ""
+      ].join(" ").toLowerCase();
+
+      const matchesSearch = searchableText.includes(search);
+      const matchesFilter = transactionFilter === "All" ||
+        transaction.type.toLowerCase() === transactionFilter.toLowerCase();
 
       return matchesSearch && matchesFilter;
     });
-  const totalPages = Math.ceil(
-    filteredTransactions.length / transactionsPerPage
-  );
 
+  const totalPages = Math.ceil(filteredTransactions.length / transactionsPerPage);
   const startIndex = (currentPage - 1) * transactionsPerPage;
-
   const currentTransactions = filteredTransactions.slice(
     startIndex,
     startIndex + transactionsPerPage
   );
+
   const renderDashboard = () => (
     <section className={pageClass}>
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
@@ -1265,210 +1324,239 @@ function App() {
     </section>
   );
 
-  const renderTransactions = () => (
-    !user ? (
-      <section className={`${pageClass} flex min-h-[65vh] items-center justify-center`}>
-        <div className="w-full max-w-md rounded-2xl border border-[#e7ece8] bg-white px-6 py-12 text-center shadow-sm">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#edf8ef] text-[#34834e]">
-            <History size={30} />
-          </div>
-
-          <h2 className="mt-6 text-xl font-bold text-[#23372b]">
-            Sign in to view transactions
-          </h2>
-
-          <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#829087]">
-            Your deposits, withdrawals, and trading activities will appear here
-            once you sign in to your TMRX Global account.
-          </p>
-
-          <button
-            onClick={() => setAuth("Login")}
-            className="mt-7 w-full rounded-xl bg-[#34834e] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#286b3e]"
-          >
-            Sign in to continue
-          </button>
-
-          <p className="mt-4 text-xs text-[#829087]">
-            Don't have an account?{" "}
+  const renderTransactions = () => {
+    if (!user) {
+      return (
+        <section className={`${pageClass} flex min-h-[65vh] items-center justify-center`}>
+          <div className="w-full max-w-md rounded-2xl border border-[#e7ece8] bg-white px-6 py-12 text-center shadow-sm">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#edf8ef] text-[#34834e]">
+              <History size={30} />
+            </div>
+            <h2 className="mt-6 text-xl font-bold text-[#23372b]">Sign in to view transactions</h2>
+            <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#829087]">
+              Your deposits and demo buy/sell orders will appear here after you sign in.
+            </p>
             <button
-              onClick={() => setAuth("Register")}
-              className="font-semibold text-[#34834e] hover:underline"
+              onClick={() => setAuth("Login")}
+              className="mt-7 w-full rounded-xl bg-[#34834e] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#286b3e]"
             >
-              Create an account
+              Sign in to continue
             </button>
-          </p>
-        </div>
-      </section>
-    ) : (
+            <p className="mt-4 text-xs text-[#829087]">
+              Don't have an account?{" "}
+              <button onClick={() => setAuth("Register")} className="font-semibold text-[#34834e] hover:underline">
+                Create an account
+              </button>
+            </p>
+          </div>
+        </section>
+      );
+    }
+
+    const isLoading = transactionsLoading || ordersLoading;
+
+    return (
       <section className={pageClass}>
         <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="mb-2 text-[10px] font-bold tracking-[2px] text-[#378a56]">
-              ACCOUNT RECORDS
-            </p>
-            <h1 className="text-2xl font-bold sm:text-3xl">
-              Transactions
-            </h1>
-            <p className="mt-2 text-sm text-[#829087]">
-              Review deposits, withdrawals, and trades.
-            </p>
+            <p className="mb-2 text-[10px] font-bold tracking-[2px] text-[#378a56]">ACCOUNT RECORDS</p>
+            <h1 className="text-2xl font-bold sm:text-3xl">Transactions</h1>
+            <p className="mt-2 text-sm text-[#829087]">Track your deposits and buy/sell order history.</p>
           </div>
-
           <button
-            onClick={() =>
-              exportTransactions()
-            }
-            className="inline-flex items-center gap-2 rounded-xl border border-[#dfe7e1] bg-white px-4 py-3 text-sm font-semibold hover:bg-gray-50"
+            onClick={exportTransactions}
+            disabled={allTransactions.length === 0}
+            className="inline-flex items-center gap-2 rounded-xl border border-[#dfe7e1] bg-white px-4 py-3 text-sm font-semibold transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Download size={17} />
-            Export
+            <Download size={17} /> Export CSV
           </button>
         </div>
 
-        {actionMessage && (
-          <div className="mb-5 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
-            {actionMessage}
-          </div>
-        )}
+        <div className="mb-5 flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
+          <Info size={18} className="mt-0.5 shrink-0" />
+          <p className="leading-6">
+            This page displays recorded deposits and demo buy/sell orders. An order status is only the status stored in the app; it does not prove real crypto settlement.
+          </p>
+        </div>
 
         <div className="rounded-2xl border border-[#e7ece8] bg-white p-5 sm:p-7">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="flex items-center gap-3 rounded-xl border border-[#dfe7e1] px-4">
-              <Search size={18} className="text-[#829087]" />
+              <Search size={18} className="shrink-0 text-[#829087]" />
               <input
                 value={transactionSearch}
-                onChange={(event) =>
-                  setTransactionSearch(event.target.value)
-                }
-                placeholder="Search reference or transaction"
+                onChange={(event) => setTransactionSearch(event.target.value)}
+                placeholder="Search reference, coin or transaction"
                 className="w-full py-3.5 text-sm outline-none"
               />
+              {transactionSearch && (
+                <button onClick={() => setTransactionSearch("")} className="text-xs font-semibold text-[#829087] hover:text-red-500">
+                  Clear
+                </button>
+              )}
             </div>
 
             <div className="flex items-center gap-3">
-              <SlidersHorizontal size={18} className="text-[#829087]" />
+              <SlidersHorizontal size={18} className="shrink-0 text-[#829087]" />
               <select
                 value={transactionFilter}
-                onChange={(event) =>
-                  setTransactionFilter(event.target.value)
-                }
+                onChange={(event) => setTransactionFilter(event.target.value)}
                 className="w-full rounded-xl border border-[#dfe7e1] bg-white px-4 py-3.5 text-sm outline-none focus:border-[#34834e]"
               >
-                <option>All</option>
-                <option>Deposit</option>
-                <option>Withdraw</option>
-                <option>Buy</option>
-                <option>Sell</option>
+                <option value="All">All transactions</option>
+                <option value="Deposit">Deposits</option>
+                <option value="Buy">Buy orders</option>
+                <option value="Sell">Sell orders</option>
               </select>
             </div>
           </div>
 
-          <div className="mt-5 flex items-center justify-between">
-            <p className="text-xs text-[#829087]">
-              Your actual account transactions
-            </p>
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="rounded-xl bg-[#f5f9f5] p-4">
+              <p className="text-xs text-[#829087]">Total records</p>
+              <p className="mt-2 text-xl font-bold text-[#153c2a]">{allTransactions.length}</p>
+            </div>
+            <div className="rounded-xl bg-[#f5f9f5] p-4">
+              <p className="text-xs text-[#829087]">Deposits</p>
+              <p className="mt-2 text-xl font-bold text-emerald-700">{transactions.length}</p>
+            </div>
+            <div className="col-span-2 rounded-xl bg-[#f5f9f5] p-4 sm:col-span-1">
+              <p className="text-xs text-[#829087]">Buy / Sell orders</p>
+              <p className="mt-2 text-xl font-bold text-[#153c2a]">{orderTransactions.length}</p>
+            </div>
+          </div>
 
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-[#829087]">Showing {filteredTransactions.length} matching record(s)</p>
             <button
-              onClick={getTransactionHistory}
-              disabled={transactionsLoading}
-              className="text-xs font-semibold text-[#348a56] hover:underline disabled:opacity-50"
+              onClick={refreshAllTransactions}
+              disabled={isLoading}
+              className="inline-flex items-center gap-2 text-xs font-semibold text-[#348a56] transition hover:underline disabled:opacity-50"
             >
-              {transactionsLoading ? "Refreshing..." : "Refresh"}
+              <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
+              {isLoading ? "Refreshing..." : "Refresh history"}
             </button>
           </div>
 
           <div className="mt-6 space-y-3">
-            {currentTransactions.map((transaction) => (
-              <div
-                key={transaction.id}
-                className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#edf0ed] p-4"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#edf8ef] text-[#34834e]">
-                    {transaction.type === "Deposit" ? (
-                      <ArrowDownLeft size={21} />
-                    ) : transaction.type === "Withdraw" ? (
-                      <ArrowUpRight size={21} />
-                    ) : (
-                      <ArrowLeftRight size={21} />
+            {isLoading && allTransactions.length === 0 ? (
+              <div className="flex flex-col items-center py-14 text-center">
+                <RefreshCw size={28} className="animate-spin text-[#34834e]" />
+                <p className="mt-4 text-sm font-semibold text-[#23372b]">Loading transactions...</p>
+                <p className="mt-1 text-xs text-[#829087]">Retrieving your account history.</p>
+              </div>
+            ) : currentTransactions.length > 0 ? (
+              currentTransactions.map((transaction) => {
+                const isBuy = transaction.type === "buy";
+                const isSell = transaction.type === "sell";
+                const isDeposit = transaction.type === "Deposit";
+                const label = isBuy ? "Buy Order" : isSell ? "Sell Order" : "Wallet Deposit";
+                const typeColor = isBuy
+                  ? "bg-blue-50 text-blue-700"
+                  : isSell
+                    ? "bg-purple-50 text-purple-700"
+                    : "bg-emerald-50 text-emerald-700";
+                const status = String(transaction.status || "Pending");
+                const isCompleted = ["completed", "success"].includes(status.toLowerCase());
+                const amountLabel = isBuy
+                  ? "Total to pay"
+                  : isSell
+                    ? "Net amount to receive"
+                    : "Deposit amount";
+                const amountPrefix = isBuy ? "−" : "+";
+
+                return (
+                  <div key={transaction.id} className="rounded-xl border border-[#edf0ed] p-4 transition hover:border-[#c9ddce] hover:bg-[#fcfefc]">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div className="flex min-w-0 flex-1 items-start gap-3">
+                        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${isBuy ? "bg-blue-50 text-blue-700" : isSell ? "bg-purple-50 text-purple-700" : "bg-[#edf8ef] text-[#34834e]"}`}>
+                          {isDeposit ? <ArrowDownLeft size={21} /> : isBuy ? <TrendingUp size={21} /> : isSell ? <TrendingDown size={21} /> : <ArrowLeftRight size={21} />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-semibold text-[#23372b]">{transaction.description}</p>
+                            <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${typeColor}`}>{label}</span>
+                          </div>
+                          <p className="mt-2 break-all text-xs text-[#829087]">Ref: {transaction.id}</p>
+                          <p className="mt-1 text-xs text-[#829087]">{transaction.date}</p>
+                        </div>
+                      </div>
+
+                      <div className="min-w-[140px] text-right">
+                        <p className={`text-sm font-bold ${isBuy ? "text-amber-700" : "text-emerald-700"}`}>
+                          {amountPrefix}{formatNaira(transaction.amount).slice(1)}
+                        </p>
+                        <p className="mt-1 text-[10px] text-[#829087]">{amountLabel}</p>
+                        <span className={`mt-2 inline-block rounded-full px-2.5 py-1 text-[10px] font-semibold ${isCompleted ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                          {status}
+                        </span>
+                      </div>
+                    </div>
+
+                    {(isBuy || isSell) && (
+                      <div className="mt-4 grid grid-cols-1 gap-3 border-t border-[#edf0ed] pt-4 sm:grid-cols-3">
+                        <div>
+                          <p className="text-[10px] text-[#829087]">Coin amount</p>
+                          <p className="mt-1 text-sm font-semibold text-[#23372b]">
+                            {Number(transaction.coinAmount).toLocaleString("en-US", { maximumFractionDigits: 8 })} {transaction.coin}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-[#829087]">Order amount</p>
+                          <p className="mt-1 text-sm font-semibold text-[#23372b]">{formatNaira(transaction.orderAmount)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-[#829087]">Processing fee ({(Number(transaction.processingFeeRate ?? 0.03) * 100).toFixed(0)}%)</p>
+                          <p className="mt-1 text-sm font-semibold text-[#23372b]">{formatNaira(transaction.processingFee)}</p>
+                        </div>
+                      </div>
                     )}
                   </div>
-
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">
-                      {transaction.description}
-                    </p>
-                    <p className="mt-1 text-xs text-[#829087]">
-                      {transaction.date} · {transaction.id}
-                    </p>
-                  </div>
+                );
+              })
+            ) : (
+              <div className="py-12 text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#edf8ef] text-[#34834e]">
+                  <History size={27} />
                 </div>
-
-                <div className="text-right">
-                  <p
-                    className={`text-sm font-bold ${transaction.amount > 0
-                      ? "text-emerald-700"
-                      : "text-[#23372b]"
-                      }`}
-                  >
-                    {transaction.amount > 0 ? "+" : "−"}
-                    {formatNaira(Math.abs(transaction.amount)).slice(1)}
-                  </p>
-
-                  <span
-                    className={`mt-1 inline-block rounded-full px-2.5 py-1 text-[10px] font-semibold ${transaction.status === "Completed"
-                      ? "bg-emerald-50 text-emerald-700"
-                      : "bg-amber-50 text-amber-700"
-                      }`}
-                  >
-                    {transaction.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-
-            {filteredTransactions.length === 0 && (
-              <div className="py-10 text-center">
-                <History size={28} className="mx-auto text-[#a1ada4]" />
-
-                <p className="mt-3 text-sm font-semibold">
-                  No matching transactions
+                <p className="mt-4 text-sm font-semibold text-[#23372b]">
+                  {allTransactions.length === 0 ? "No transactions yet" : "No matching transactions"}
                 </p>
-
-                <p className="mt-1 text-xs text-[#829087]">
-                  Try another search term or filter.
+                <p className="mx-auto mt-2 max-w-sm text-xs leading-5 text-[#829087]">
+                  {allTransactions.length === 0
+                    ? "Your wallet deposits and buy/sell orders will appear here."
+                    : "Try another search term or select a different transaction filter."}
                 </p>
-              </div>
-            )}
-            {totalPages > 1 && (
-              <div className="mt-6 flex items-center justify-between">
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Previous
-                </button>
-
-                <span className="text-sm text-gray-600">
-                  Page {currentPage} of {totalPages}
-                </span>
-
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Next
-                </button>
+                {transactionSearch && (
+                  <button onClick={() => setTransactionSearch("")} className="mt-4 text-xs font-semibold text-[#34834e] hover:underline">
+                    Clear search
+                  </button>
+                )}
               </div>
             )}
           </div>
+
+          {totalPages > 1 && (
+            <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-[#edf0ed] pt-5">
+              <p className="text-xs text-[#829087]">Page {currentPage} of {totalPages}</p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage((previous) => Math.max(previous - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="rounded-lg border border-[#dfe7e1] px-4 py-2 text-xs font-semibold text-[#23372b] transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >Previous</button>
+                <button
+                  onClick={() => setCurrentPage((previous) => Math.min(previous + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="rounded-lg border border-[#dfe7e1] px-4 py-2 text-xs font-semibold text-[#23372b] transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >Next</button>
+              </div>
+            </div>
+          )}
         </div>
       </section>
-    )
-  );
+    );
+  };
 
   const renderSettings = () => (
     !user ? (
@@ -1721,80 +1809,295 @@ function App() {
       </section>
     )
   );
-  const renderOrderPreview = () => (
-    <section className={pageClass}>
-      <div className="mx-auto max-w-3xl">
-        <button
-          onClick={() => goTo("Buy / Sell")}
-          className="mb-6 text-sm font-semibold text-[#34834e] hover:underline"
-        >
-          ← Back to Buy / Sell
-        </button>
 
-        <div className="rounded-2xl border border-[#e7ece8] bg-white p-6 sm:p-8">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#edf8ef] text-[#34834e]">
-            <ArrowLeftRight size={24} />
-          </div>
+  const [orderLoading, setOrderLoading] = useState(false);
 
-          <h1 className="mt-5 text-2xl font-bold">
-            Review your order
-          </h1>
-          <p className="mt-2 text-sm text-[#829087]">
-            Check the details of your proposed trade.
-          </p>
+  const submitOrder = async () => {
+    try {
+      if (!user) {
+        Swal.fire({
+          icon: "warning",
+          title: "Login required",
+          text: "Please log in before submitting an order."
+        });
+        return;
+      }
 
-          <div className="mt-7 rounded-xl bg-[#f5f9f5] p-5">
-            <p className="text-sm text-[#64786a]">
-              {tradeType === "buy" ? "You are buying" : "You are selling"}
-            </p>
-            <p className="mt-2 text-2xl font-bold">{selectedCoin}</p>
-            <p className="mt-1 text-sm text-[#64786a]">
-              Coin amount:{" "}
-              {coinAmount.toLocaleString("en-US", {
-                maximumSignificantDigits: 8,
-              })}{" "}
-              {selectedCoin}
-            </p>
-          </div>
+      if (orderLoading) return;
 
-          <div className="mt-6 space-y-4">
-            <div className="flex justify-between gap-4 text-sm">
-              <span className="text-[#829087]">Order type</span>
-              <span className="font-semibold capitalize">{tradeType}</span>
-            </div>
-            <div className="flex justify-between gap-4 text-sm">
-              <span className="text-[#829087]">
-                Estimated Naira amount
-              </span>
-              <span className="font-semibold">
-                {formatNaira(estimatedAmount)}
-              </span>
-            </div>
-            <div className="flex justify-between gap-4 text-sm">
-              <span className="text-[#829087]">Illustrative rate</span>
-              <span className="font-semibold">
-                ₦{coinRates[selectedCoin].toLocaleString("en-NG")} /{" "}
-                {selectedCoin}
-              </span>
-            </div>
-          </div>
+      setOrderLoading(true);
 
-          <div className="mt-6 flex items-start gap-2 rounded-xl bg-amber-50 p-4 text-xs leading-5 text-amber-800">
-            <Info size={17} className="mt-0.5 shrink-0" />
-            This is a demonstration preview. No order has been submitted,
-            and no payment or cryptocurrency transfer has occurred.
-          </div>
+      const selectedMarket = markets.find(
+        (coin) => coin.symbol === `${selectedCoin}USDT`
+      );
+
+      const selectedCoinUsd = selectedMarket
+        ? Number(selectedMarket.lastPrice)
+        : selectedCoin === "USDT"
+          ? 1
+          : 0;
+
+      if (!selectedCoinUsd || !exchangeRate || Number(tradeAmount) <= 0) {
+        throw new Error("Invalid coin amount or market rate.");
+      }
+
+      const response = await axios.post(
+        `${backendUrl}/order/create`,
+        {
+          type: tradeType,
+          coin: selectedCoin,
+          coinAmount: Number(tradeAmount),
+          marketPriceUsd: selectedCoinUsd,
+          exchangeRate: Number(exchangeRate)
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("authToken")}`
+          }
+        }
+      );
+
+      const result = response.data;
+
+      if (!result.status) {
+        throw new Error(result.message || "Order submission failed.");
+      }
+
+      await Swal.fire({
+        icon: "success",
+        title: "Demo order submitted!",
+        html: `
+                <div style="text-align:left">
+                    <p>Reference: <strong>${result.data.reference}</strong></p>
+                    <p>Order amount: <strong>${formatNaira(result.data.orderAmount)}</strong></p>
+                    <p>Processing fee (3%): <strong>${formatNaira(result.data.processingFee)}</strong></p>
+                    <p>Final amount: <strong>${formatNaira(result.data.finalAmount)}</strong></p>
+                    <p>Status: <strong>${result.data.status}</strong></p>
+                </div>
+                <p style="margin-top:12px;font-size:12px;color:#829087">
+                    This is a demo order. No payment or cryptocurrency transfer has occurred.
+                </p>
+            `,
+        confirmButtonColor: "#059669"
+      });
+
+      await getOrderHistory();
+      goTo("Transactions");
+
+    } catch (error) {
+      console.error("Order submission error:", error);
+
+      Swal.fire({
+        icon: "error",
+        title: "Order failed",
+        text: error.response?.data?.message ||
+          error.message ||
+          "Unable to submit your order."
+      });
+    } finally {
+      setOrderLoading(false);
+    }
+  };
+
+
+  const renderOrderPreview = () => {
+    // EDITABLE PROCESSING FEE
+    const processingFeeRate = 0.03; // 3%
+
+    const selectedMarket = markets.find(
+      (coin) => coin.symbol === `${selectedCoin}USDT`
+    );
+
+    const selectedCoinUsd = selectedMarket
+      ? Number(selectedMarket.lastPrice)
+      : selectedCoin === "USDT"
+        ? 1
+        : 0;
+
+    const selectedCoinNgn = exchangeRate
+      ? selectedCoinUsd * exchangeRate
+      : 0;
+
+    const coinAmount = Number(tradeAmount) || 0;
+    const estimatedAmount = coinAmount * selectedCoinNgn;
+
+    // Processing fee calculation
+    const processingFee = estimatedAmount * processingFeeRate;
+
+    // Buy adds fee; Sell deducts fee
+    const finalAmount = tradeType === "buy"
+      ? estimatedAmount + processingFee
+      : estimatedAmount - processingFee;
+
+    const hasValidRate =
+      selectedCoinUsd > 0 &&
+      selectedCoinNgn > 0 &&
+      exchangeRate > 0;
+
+    return (
+      <section className={pageClass}>
+        <div className="mx-auto max-w-3xl">
 
           <button
-            disabled
-            className="mt-6 w-full cursor-not-allowed rounded-xl bg-[#153c2a] px-5 py-3.5 text-sm font-bold text-white opacity-60"
+            onClick={() => goTo("Buy / Sell")}
+            className="mb-6 text-sm font-semibold text-[#34834e] hover:underline"
           >
-            Confirm trade — backend required
+            ← Back to Buy / Sell
           </button>
+
+          <div className="rounded-2xl border border-[#e7ece8] bg-white p-6 sm:p-8">
+
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#edf8ef] text-[#34834e]">
+              <ArrowLeftRight size={24} />
+            </div>
+
+            <h1 className="mt-5 text-2xl font-bold">
+              Review your order
+            </h1>
+
+            <p className="mt-2 text-sm text-[#829087]">
+              Check the details of your proposed trade.
+            </p>
+
+            {/* Coin details */}
+            <div className="mt-7 rounded-xl bg-[#f5f9f5] p-5">
+              <p className="text-sm text-[#64786a]">
+                {tradeType === "buy"
+                  ? "You are buying"
+                  : "You are selling"}
+              </p>
+
+              <p className="mt-2 text-2xl font-bold">
+                {selectedCoin}
+              </p>
+
+              <p className="mt-1 text-sm text-[#64786a]">
+                Coin amount:{" "}
+                {coinAmount.toLocaleString("en-US", {
+                  maximumFractionDigits: 8,
+                })}{" "}
+                {selectedCoin}
+              </p>
+            </div>
+
+            {/* Order summary */}
+            <div className="mt-6 space-y-4">
+
+              <div className="flex justify-between gap-4 text-sm">
+                <span className="text-[#829087]">
+                  Order type
+                </span>
+
+                <span className="font-semibold capitalize">
+                  {tradeType}
+                </span>
+              </div>
+
+              <div className="flex justify-between gap-4 text-sm">
+                <span className="text-[#829087]">
+                  Order amount
+                </span>
+
+                <span className="font-semibold">
+                  {hasValidRate
+                    ? formatNaira(estimatedAmount)
+                    : "Rate unavailable"}
+                </span>
+              </div>
+
+              <div className="flex justify-between gap-4 text-sm">
+                <span className="text-[#829087]">
+                  Processing fee ({processingFeeRate * 100}%)
+                </span>
+
+                <span className="font-semibold">
+                  {hasValidRate
+                    ? `${tradeType === "buy" ? "+" : "-"}${formatNaira(processingFee)}`
+                    : "Unavailable"}
+                </span>
+              </div>
+
+              <div className="flex justify-between gap-4 border-t border-[#e7ece8] pt-4 text-sm">
+                <span className="font-bold">
+                  {tradeType === "buy"
+                    ? "Total amount to pay"
+                    : "Net amount to receive"}
+                </span>
+
+                <span className="font-bold text-[#34834e]">
+                  {hasValidRate
+                    ? formatNaira(finalAmount)
+                    : "Unavailable"}
+                </span>
+              </div>
+
+              <div className="flex justify-between gap-4 text-sm">
+                <span className="text-[#829087]">
+                  NGN market rate (estimate)
+                </span>
+
+                <span className="font-semibold text-right">
+                  {hasValidRate
+                    ? `₦${selectedCoinNgn.toLocaleString("en-NG", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })} / ${selectedCoin}`
+                    : "Unavailable"}
+                </span>
+              </div>
+
+              <div className="flex justify-between gap-4 text-sm">
+                <span className="text-[#829087]">
+                  USD market price
+                </span>
+
+                <span className="font-semibold">
+                  {selectedCoinUsd > 0
+                    ? `$${selectedCoinUsd.toLocaleString("en-US", {
+                      maximumFractionDigits: 8
+                    })}`
+                    : "Unavailable"}
+                </span>
+              </div>
+            </div>
+
+            {/* Notice */}
+            <div className="mt-6 flex items-start gap-2 rounded-xl bg-amber-50 p-4 text-xs leading-5 text-amber-800">
+              <Info size={17} className="mt-0.5 shrink-0" />
+
+              <p>
+                This is a demonstration preview. Market prices
+                and estimated fees may change before an order
+                is submitted. No payment or cryptocurrency
+                transfer has occurred.
+              </p>
+            </div>
+
+            {/* Confirmation button */}
+
+            <button
+              onClick={submitOrder}
+              disabled={
+                coinAmount <= 0 ||
+                !hasValidRate ||
+                finalAmount <= 0 ||
+                orderLoading
+              }
+              className="mt-6 w-full rounded-xl bg-[#153c2a] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#20583d] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {orderLoading
+                ? "Submitting order..."
+                : "Submit demo order"}
+            </button>
+
+
+          </div>
         </div>
-      </div>
-    </section>
-  );
+      </section>
+    );
+  };
+
+
 
   return (
     <div className="min-h-screen bg-[#f6f8f6] text-[#17251e]">
