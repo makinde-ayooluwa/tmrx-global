@@ -118,7 +118,11 @@ const formatNaira = (amount) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
-
+const supportedNetworks = {
+    USDT: ["TRC20", "ERC20", "BEP20"],
+    BTC: ["BITCOIN"],
+    ETH: ["ERC20"]
+};
 function App() {
   const {
     user,
@@ -533,6 +537,7 @@ function App() {
   const [balanceVisible, setBalanceVisible] = useState(false);
   const [tradeType, setTradeType] = useState("buy");
   const [selectedCoin, setSelectedCoin] = useState("USDT");
+  const [selectedNetwork, setSelectedNetwork] = useState("");
   const [tradeAmount, setTradeAmount] = useState(0);
   const [walletAction, setWalletAction] = useState("");
   const [actionAmount, setActionAmount] = useState("");
@@ -900,7 +905,10 @@ function App() {
             <select
               id="coin"
               value={selectedCoin}
-              onChange={(event) => setSelectedCoin(event.target.value)}
+              onChange={(e) => {
+    setSelectedCoin(e.target.value);
+    setSelectedNetwork("");
+}}
               className="w-full rounded-xl border border-[#dfe7e1] bg-white px-4 py-3.5 text-sm outline-none focus:border-[#34834e]"
             >
               {[...availableCoins]
@@ -921,7 +929,27 @@ function App() {
               </p>
             )}
           </div>
+{tradeType === "sell" && (
+    <div className="mt-4">
+        <label className="mb-2 block text-sm font-medium">
+            Select Network
+        </label>
 
+        <select
+            value={selectedNetwork}
+            onChange={(e) => setSelectedNetwork(e.target.value)}
+            className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-green-600"
+        >
+            <option value="">Choose network</option>
+
+            {(supportedNetworks[selectedCoin] || []).map((network) => (
+                <option key={network} value={network}>
+                    {network}
+                </option>
+            ))}
+        </select>
+    </div>
+)}
           <div className="mt-5">
             <label
               htmlFor="trade-amount"
@@ -1849,6 +1877,7 @@ const [depositLoading, setDepositLoading] = useState(false);
           coin: selectedCoin,
           coinAmount: Number(tradeAmount),
           marketPriceUsd: selectedCoinUsd,
+          network: tradeType === "sell" ? selectedNetwork : null,
           exchangeRate: Number(exchangeRate)
         },
         {
