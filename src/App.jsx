@@ -56,7 +56,6 @@ const coinRates = {
   BTC: 168450000,
   ETH: 6250000,
 };
-
 const marketCoins = [
   {
     name: "Bitcoin",
@@ -665,7 +664,7 @@ function App() {
       )}
 
       <p className="mt-2 text-xs text-[#c6dace]">
-        Demo balance — not connected to a real account
+        Wallet balance — your TMRX Global wallet funds
       </p>
 
       {user != null && (
@@ -1811,7 +1810,9 @@ function App() {
   );
 
   const [orderLoading, setOrderLoading] = useState(false);
-
+const [txId, setTxId] = useState("");
+const [createdSellOrder, setCreatedSellOrder] = useState(null);
+const [depositLoading, setDepositLoading] = useState(false);
   const submitOrder = async () => {
     try {
       if (!user) {
@@ -1862,7 +1863,11 @@ function App() {
       if (!result.status) {
         throw new Error(result.message || "Order submission failed.");
       }
-
+if (tradeType === "sell") {
+    setCreatedSellOrder(result.data);
+    setTxId("");
+    return;
+}
       await Swal.fire({
         icon: "success",
         title: "Demo order submitted!",
@@ -1898,6 +1903,58 @@ function App() {
       setOrderLoading(false);
     }
   };
+  const submitDeposit = async () => {
+    try {
+        if (!createdSellOrder?._id) {
+            throw new Error("No sell order found.");
+        }
+
+        if (!txId.trim()) {
+            throw new Error("Please enter your transaction ID.");
+        }
+
+        setDepositLoading(true);
+
+        const response = await axios.post(
+            `${backendUrl}/deposit/create`,
+            {
+                orderId: createdSellOrder._id,
+                txId: txId.trim()
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${sessionStorage.getItem("authToken")}`
+                }
+            }
+        );
+
+        const result = response.data;
+
+        if (!result.status) {
+            throw new Error(result.message || "Deposit submission failed.");
+        }
+
+        await Swal.fire({
+            icon: "success",
+            title: "Transaction ID submitted!",
+            text: "Your demo deposit record has been created and is awaiting simulated verification."
+        });
+
+        setCreatedSellOrder(null);
+        setTxId("");
+
+        // Refresh deposit history here if your app already has that function.
+
+    } catch (error) {
+        Swal.fire({
+            icon: "error",
+            title: "Submission failed",
+            text: error.response?.data?.message || error.message
+        });
+    } finally {
+        setDepositLoading(false);
+    }
+};
 
 
   const renderOrderPreview = () => {
@@ -2089,7 +2146,34 @@ function App() {
                 ? "Submitting order..."
                 : "Submit demo order"}
             </button>
+{createdSellOrder && (
+    <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h3 className="text-lg font-semibold">
+            Submit Transaction ID
+        </h3>
 
+        <p className="mt-2 text-sm text-gray-500">
+            Sell order: {createdSellOrder.reference}
+        </p>
+
+        <input
+            type="text"
+            value={txId}
+            onChange={(e) => setTxId(e.target.value)}
+            placeholder="Enter your transaction ID"
+            className="mt-4 w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-green-600"
+        />
+
+        <button
+            type="button"
+            onClick={submitDeposit}
+            disabled={depositLoading}
+            className="mt-4 w-full rounded-xl bg-green-700 px-5 py-3 font-medium text-white disabled:opacity-50"
+        >
+            {depositLoading ? "Submitting..." : "Submit Transaction ID"}
+        </button>
+    </div>
+)}
 
           </div>
         </div>
@@ -2156,15 +2240,15 @@ function App() {
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#315a43] text-sm font-bold text-[#c9f8d3]">
             {userData?.fullname
               ? userData.fullname.charAt(0).toUpperCase()
-              : "CT"}
+              : "TMRX"}
           </div>
 
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">
-              {userData?.fullname || "My Account"}
+              {userData?.fullname || "Account Name"}
             </p>
             <p className="mt-1 truncate text-xs text-[#a6b8ad]">
-              {userData?.email || "Demo account"}
+              {userData?.email || "Account Email"}
             </p>
           </div>
 
