@@ -119,9 +119,9 @@ const formatNaira = (amount) =>
     maximumFractionDigits: 2,
   })}`;
 const supportedNetworks = {
-    USDT: ["TRC20", "ERC20", "BEP20"],
-    BTC: ["BITCOIN"],
-    ETH: ["ERC20"]
+  USDT: ["TRC20", "ERC20", "BEP20"],
+  BTC: ["BITCOIN"],
+  ETH: ["ERC20"]
 };
 function App() {
   const {
@@ -166,6 +166,8 @@ function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [orderTransactions, setOrderTransactions] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [depositTransactions, setDepositTransactions] = useState([]);
+  const [depositsLoading, setDepositsLoading] = useState(false);
   const transactionsPerPage = 10;
 
   const getOrderHistory = async () => {
@@ -191,7 +193,32 @@ function App() {
       setOrdersLoading(false);
     }
   };
+  const getDepositHistory = async () => {
+    try {
+      setDepositsLoading(true);
 
+      const response = await axios.get(`${backendUrl}/deposit/history`, {
+        headers: {
+          Authorization: `Bearer ${sessionStorage.getItem("authToken")}`
+        }
+      });
+
+      const result = response.data;
+
+      if (result.status) {
+        setDepositTransactions(
+          Array.isArray(result.data) ? result.data : []
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Deposit history error:",
+        error.response?.data?.message || error.message
+      );
+    } finally {
+      setDepositsLoading(false);
+    }
+  };
   const getTransactionHistory = async () => {
     try {
       setTransactionsLoading(true);
@@ -217,7 +244,11 @@ function App() {
   };
 
   const refreshAllTransactions = async () => {
-    await Promise.all([getTransactionHistory(), getOrderHistory()]);
+    await Promise.all([
+      getTransactionHistory(),
+      getOrderHistory(),
+      getDepositHistory()
+    ]);
   };
 
   useEffect(() => {
@@ -226,6 +257,7 @@ function App() {
     } else {
       setTransactions([]);
       setOrderTransactions([]);
+      setDepositTransactions([]);
       setCurrentPage(1);
     }
   }, [user]);
@@ -906,9 +938,9 @@ function App() {
               id="coin"
               value={selectedCoin}
               onChange={(e) => {
-    setSelectedCoin(e.target.value);
-    setSelectedNetwork("");
-}}
+                setSelectedCoin(e.target.value);
+                setSelectedNetwork("");
+              }}
               className="w-full rounded-xl border border-[#dfe7e1] bg-white px-4 py-3.5 text-sm outline-none focus:border-[#34834e]"
             >
               {[...availableCoins]
@@ -929,27 +961,27 @@ function App() {
               </p>
             )}
           </div>
-{tradeType === "sell" && (
-    <div className="mt-4">
-        <label className="mb-2 block text-sm font-medium">
-            Select Network
-        </label>
+          {tradeType === "sell" && (
+            <div className="mt-4">
+              <label className="mb-2 block text-sm font-medium">
+                Select Network
+              </label>
 
-        <select
-            value={selectedNetwork}
-            onChange={(e) => setSelectedNetwork(e.target.value)}
-            className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-green-600"
-        >
-            <option value="">Choose network</option>
+              <select
+                value={selectedNetwork}
+                onChange={(e) => setSelectedNetwork(e.target.value)}
+                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-green-600"
+              >
+                <option value="">Choose network</option>
 
-            {(supportedNetworks[selectedCoin] || []).map((network) => (
-                <option key={network} value={network}>
+                {(supportedNetworks[selectedCoin] || []).map((network) => (
+                  <option key={network} value={network}>
                     {network}
-                </option>
-            ))}
-        </select>
-    </div>
-)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="mt-5">
             <label
               htmlFor="trade-amount"
@@ -1380,7 +1412,8 @@ function App() {
       );
     }
 
-    const isLoading = transactionsLoading || ordersLoading;
+    const isLoading =
+      transactionsLoading || ordersLoading || depositsLoading;
 
     return (
       <section className={pageClass}>
@@ -1444,8 +1477,10 @@ function App() {
               <p className="mt-2 text-xl font-bold text-[#153c2a]">{allTransactions.length}</p>
             </div>
             <div className="rounded-xl bg-[#f5f9f5] p-4">
-              <p className="text-xs text-[#829087]">Deposits</p>
-              <p className="mt-2 text-xl font-bold text-emerald-700">{transactions.length}</p>
+              <p className="text-xs text-[#829087]">Wallet Deposits</p>
+              <p className="mt-2 text-xl font-bold text-emerald-700">
+                {transactions.length}
+              </p>
             </div>
             <div className="col-span-2 rounded-xl bg-[#f5f9f5] p-4 sm:col-span-1">
               <p className="text-xs text-[#829087]">Buy / Sell orders</p>
@@ -1521,22 +1556,46 @@ function App() {
                     </div>
 
                     {(isBuy || isSell) && (
-                      <div className="mt-4 grid grid-cols-1 gap-3 border-t border-[#edf0ed] pt-4 sm:grid-cols-3">
-                        <div>
-                          <p className="text-[10px] text-[#829087]">Coin amount</p>
-                          <p className="mt-1 text-sm font-semibold text-[#23372b]">
-                            {Number(transaction.coinAmount).toLocaleString("en-US", { maximumFractionDigits: 8 })} {transaction.coin}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-[#829087]">Order amount</p>
-                          <p className="mt-1 text-sm font-semibold text-[#23372b]">{formatNaira(transaction.orderAmount)}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-[#829087]">Processing fee ({(Number(transaction.processingFeeRate ?? 0.03) * 100).toFixed(0)}%)</p>
-                          <p className="mt-1 text-sm font-semibold text-[#23372b]">{formatNaira(transaction.processingFee)}</p>
-                        </div>
-                      </div>
+                      <div className="mt-4 grid grid-cols-1 gap-3 border-t border-[#edf0ed] pt-4 sm:grid-cols-2 lg:grid-cols-3">
+  <div>
+    <p className="text-[10px] text-[#829087]">Coin amount</p>
+    <p className="mt-1 text-sm font-semibold text-[#23372b]">
+      {Number(transaction.coinAmount).toLocaleString("en-US", {
+        maximumFractionDigits: 8
+      })} {transaction.coin}
+    </p>
+  </div>
+
+  <div>
+    <p className="text-[10px] text-[#829087]">Network</p>
+    <p className="mt-1 text-sm font-semibold text-[#23372b]">
+      {transaction.network || "Not specified"}
+    </p>
+  </div>
+
+  <div>
+    <p className="text-[10px] text-[#829087]">Order amount</p>
+    <p className="mt-1 text-sm font-semibold text-[#23372b]">
+      {formatNaira(transaction.orderAmount)}
+    </p>
+  </div>
+
+  <div>
+    <p className="text-[10px] text-[#829087]">
+      Processing fee ({(Number(transaction.processingFeeRate ?? 0.03) * 100).toFixed(0)}%)
+    </p>
+    <p className="mt-1 text-sm font-semibold text-[#23372b]">
+      {formatNaira(transaction.processingFee)}
+    </p>
+  </div>
+
+  <div>
+    <p className="text-[10px] text-[#829087]">Settlement status</p>
+    <p className="mt-1 text-sm font-semibold capitalize text-[#23372b]">
+      {(transaction.settlementStatus || "not_started").replaceAll("_", " ")}
+    </p>
+  </div>
+</div>
                     )}
                   </div>
                 );
@@ -1562,7 +1621,112 @@ function App() {
               </div>
             )}
           </div>
+          {/* Deposit Verification History */}
+          <div className="mt-8 border-t border-[#edf0ed] pt-7">
+            <div className="mb-5">
+              <h2 className="text-lg font-bold text-[#23372b]">
+                Deposit Verification History
+              </h2>
+              <p className="mt-1 text-xs text-[#829087]">
+                View the recorded verification attempts for your sell orders.
+              </p>
+            </div>
 
+            {depositTransactions.length > 0 ? (
+              <div className="space-y-4">
+                {depositTransactions.map((deposit) => {
+                  const history = [...(deposit.verificationHistory || [])].sort(
+                    (a, b) => new Date(a.checkedAt) - new Date(b.checkedAt)
+                  );
+
+                  return (
+                    <div
+                      key={deposit._id}
+                      className="rounded-xl border border-[#edf0ed] p-4"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-bold text-[#23372b]">
+                            {deposit.coin} · {deposit.network}
+                          </p>
+                          <p className="mt-1 text-xs text-[#829087]">
+                            Amount: {String(deposit.amount)} {deposit.coin}
+                          </p>
+                          <p className="mt-1 break-all text-xs text-[#829087]">
+                            Transaction ID: {deposit.txId}
+                          </p>
+                        </div>
+
+                        <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold capitalize text-amber-700">
+                          {deposit.status}
+                        </span>
+                      </div>
+
+                      <p className="mt-3 text-xs leading-5 text-[#64786a]">
+                        {deposit.verificationMessage || "No verification message available."}
+                      </p>
+<div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+  <div className="rounded-lg bg-[#f5f9f5] p-3">
+    <p className="text-[10px] text-[#829087]">
+      Settlement status
+    </p>
+    <p className="mt-1 text-xs font-semibold capitalize text-[#23372b]">
+      {(deposit.settlementStatus || "not_started").replaceAll("_", " ")}
+    </p>
+  </div>
+
+  <div className="rounded-lg bg-[#f5f9f5] p-3">
+    <p className="text-[10px] text-[#829087]">
+      Delivery status
+    </p>
+    <p className="mt-1 text-xs font-semibold capitalize text-[#23372b]">
+      {(deposit.deliveryStatus || "not_started").replaceAll("_", " ")}
+    </p>
+  </div>
+</div>
+                      <div className="mt-5 border-t border-[#edf0ed] pt-4">
+                        <p className="mb-4 text-xs font-bold text-[#23372b]">
+                          Verification timeline
+                        </p>
+
+                        {history.length > 0 ? (
+                          <div className="space-y-4">
+                            {history.map((item, index) => (
+                              <div key={item._id || index} className="flex gap-3">
+                                <div className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#34834e]" />
+
+                                <div>
+                                  <p className="text-xs font-semibold capitalize text-[#23372b]">
+                                    {item.status}
+                                  </p>
+                                  <p className="mt-1 text-xs leading-5 text-[#64786a]">
+                                    {item.message}
+                                  </p>
+                                  <p className="mt-1 text-[10px] text-[#829087]">
+                                    {item.checkedAt
+                                      ? new Date(item.checkedAt).toLocaleString("en-NG")
+                                      : "Date unavailable"}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-[#829087]">
+                            No verification attempts recorded yet.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="rounded-xl border border-dashed border-[#dfe7e1] py-8 text-center text-xs text-[#829087]">
+                No deposit verification records yet.
+              </p>
+            )}
+          </div>
           {totalPages > 1 && (
             <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-[#edf0ed] pt-5">
               <p className="text-xs text-[#829087]">Page {currentPage} of {totalPages}</p>
@@ -1838,9 +2002,9 @@ function App() {
   );
 
   const [orderLoading, setOrderLoading] = useState(false);
-const [txId, setTxId] = useState("");
-const [createdSellOrder, setCreatedSellOrder] = useState(null);
-const [depositLoading, setDepositLoading] = useState(false);
+  const [txId, setTxId] = useState("");
+  const [createdSellOrder, setCreatedSellOrder] = useState(null);
+  const [depositLoading, setDepositLoading] = useState(false);
   const submitOrder = async () => {
     try {
       if (!user) {
@@ -1892,11 +2056,11 @@ const [depositLoading, setDepositLoading] = useState(false);
       if (!result.status) {
         throw new Error(result.message || "Order submission failed.");
       }
-if (tradeType === "sell") {
-    setCreatedSellOrder(result.data);
-    setTxId("");
-    return;
-}
+      if (tradeType === "sell") {
+        setCreatedSellOrder(result.data);
+        setTxId("");
+        return;
+      }
       await Swal.fire({
         icon: "success",
         title: "Demo order submitted!",
@@ -1934,56 +2098,56 @@ if (tradeType === "sell") {
   };
   const submitDeposit = async () => {
     try {
-        if (!createdSellOrder?._id) {
-            throw new Error("No sell order found.");
+      if (!createdSellOrder?._id) {
+        throw new Error("No sell order found.");
+      }
+
+      if (!txId.trim()) {
+        throw new Error("Please enter your transaction ID.");
+      }
+
+      setDepositLoading(true);
+
+      const response = await axios.post(
+        `${backendUrl}/deposit/create`,
+        {
+          orderId: createdSellOrder._id,
+          txId: txId.trim()
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("authToken")}`
+          }
         }
+      );
 
-        if (!txId.trim()) {
-            throw new Error("Please enter your transaction ID.");
-        }
+      const result = response.data;
 
-        setDepositLoading(true);
+      if (!result.status) {
+        throw new Error(result.message || "Deposit submission failed.");
+      }
 
-        const response = await axios.post(
-            `${backendUrl}/deposit/create`,
-            {
-                orderId: createdSellOrder._id,
-                txId: txId.trim()
-            },
-            {
-                headers: {
-                    Authorization: `Bearer ${sessionStorage.getItem("authToken")}`
-                }
-            }
-        );
+      await Swal.fire({
+        icon: "success",
+        title: "Transaction ID submitted!",
+        text: "Your demo deposit record has been created and is awaiting simulated verification."
+      });
 
-        const result = response.data;
+      setCreatedSellOrder(null);
+      setTxId("");
 
-        if (!result.status) {
-            throw new Error(result.message || "Deposit submission failed.");
-        }
-
-        await Swal.fire({
-            icon: "success",
-            title: "Transaction ID submitted!",
-            text: "Your demo deposit record has been created and is awaiting simulated verification."
-        });
-
-        setCreatedSellOrder(null);
-        setTxId("");
-
-        // Refresh deposit history here if your app already has that function.
+      // Refresh deposit history here if your app already has that function.
 
     } catch (error) {
-        Swal.fire({
-            icon: "error",
-            title: "Submission failed",
-            text: error.response?.data?.message || error.message
-        });
+      Swal.fire({
+        icon: "error",
+        title: "Submission failed",
+        text: error.response?.data?.message || error.message
+      });
     } finally {
-        setDepositLoading(false);
+      setDepositLoading(false);
     }
-};
+  };
 
 
   const renderOrderPreview = () => {
@@ -2175,34 +2339,34 @@ if (tradeType === "sell") {
                 ? "Submitting order..."
                 : "Submit demo order"}
             </button>
-{createdSellOrder && (
-    <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h3 className="text-lg font-semibold">
-            Submit Transaction ID
-        </h3>
+            {createdSellOrder && (
+              <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                <h3 className="text-lg font-semibold">
+                  Submit Transaction ID
+                </h3>
 
-        <p className="mt-2 text-sm text-gray-500">
-            Sell order: {createdSellOrder.reference}
-        </p>
+                <p className="mt-2 text-sm text-gray-500">
+                  Sell order: {createdSellOrder.reference}
+                </p>
 
-        <input
-            type="text"
-            value={txId}
-            onChange={(e) => setTxId(e.target.value)}
-            placeholder="Enter your transaction ID"
-            className="mt-4 w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-green-600"
-        />
+                <input
+                  type="text"
+                  value={txId}
+                  onChange={(e) => setTxId(e.target.value)}
+                  placeholder="Enter your transaction ID"
+                  className="mt-4 w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-green-600"
+                />
 
-        <button
-            type="button"
-            onClick={submitDeposit}
-            disabled={depositLoading}
-            className="mt-4 w-full rounded-xl bg-green-700 px-5 py-3 font-medium text-white disabled:opacity-50"
-        >
-            {depositLoading ? "Submitting..." : "Submit Transaction ID"}
-        </button>
-    </div>
-)}
+                <button
+                  type="button"
+                  onClick={submitDeposit}
+                  disabled={depositLoading}
+                  className="mt-4 w-full rounded-xl bg-green-700 px-5 py-3 font-medium text-white disabled:opacity-50"
+                >
+                  {depositLoading ? "Submitting..." : "Submit Transaction ID"}
+                </button>
+              </div>
+            )}
 
           </div>
         </div>
