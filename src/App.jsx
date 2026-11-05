@@ -1393,7 +1393,7 @@ function App() {
             </div>
             <h2 className="mt-6 text-xl font-bold text-[#23372b]">Sign in to view transactions</h2>
             <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#829087]">
-              Your deposits and demo buy/sell orders will appear here after you sign in.
+              Your deposits and buy/sell orders will appear here after you sign in.
             </p>
             <button
               onClick={() => setAuth("Login")}
@@ -1435,7 +1435,7 @@ function App() {
         <div className="mb-5 flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
           <Info size={18} className="mt-0.5 shrink-0" />
           <p className="leading-6">
-            This page displays recorded deposits and demo buy/sell orders. An order status is only the status stored in the app; it does not prove real crypto settlement.
+            This page displays recorded deposits and buy/sell orders. An order status is only the status stored in the app; it does not prove real crypto settlement.
           </p>
         </div>
 
@@ -2063,7 +2063,7 @@ function App() {
       }
       await Swal.fire({
         icon: "success",
-        title: "Demo order submitted!",
+        title: "Order submitted!",
         html: `
                 <div style="text-align:left">
                     <p>Reference: <strong>${result.data.reference}</strong></p>
@@ -2072,9 +2072,9 @@ function App() {
                     <p>Final amount: <strong>${formatNaira(result.data.finalAmount)}</strong></p>
                     <p>Status: <strong>${result.data.status}</strong></p>
                 </div>
-                <p style="margin-top:12px;font-size:12px;color:#829087">
+                <!--<p style="margin-top:12px;font-size:12px;color:#829087">
                     This is a demo order. No payment or cryptocurrency transfer has occurred.
-                </p>
+                </p>-->
             `,
         confirmButtonColor: "#059669"
       });
@@ -2130,7 +2130,7 @@ function App() {
       await Swal.fire({
         icon: "success",
         title: "Transaction ID submitted!",
-        text: "Your demo deposit record has been created and is awaiting simulated verification."
+        text: "Your deposit record has been created and is awaiting simulated verification."
       });
 
       setCreatedSellOrder(null);
@@ -2315,12 +2315,12 @@ function App() {
             <div className="mt-6 flex items-start gap-2 rounded-xl bg-amber-50 p-4 text-xs leading-5 text-amber-800">
               <Info size={17} className="mt-0.5 shrink-0" />
 
-              <p>
+              {/* <p>
                 This is a demonstration preview. Market prices
                 and estimated fees may change before an order
                 is submitted. No payment or cryptocurrency
                 transfer has occurred.
-              </p>
+              </p> */}
             </div>
 
             {/* Confirmation button */}
@@ -2337,7 +2337,7 @@ function App() {
             >
               {orderLoading
                 ? "Submitting order..."
-                : "Submit demo order"}
+                : "Submit order"}
             </button>
             {createdSellOrder && (
               <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
