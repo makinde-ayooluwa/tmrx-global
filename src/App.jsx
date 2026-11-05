@@ -118,11 +118,6 @@ const formatNaira = (amount) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
-const supportedNetworks = {
-  USDT: ["TRC20", "ERC20", "BEP20"],
-  BTC: ["BITCOIN"],
-  ETH: ["ERC20"]
-};
 function App() {
   const {
     user,
@@ -138,7 +133,7 @@ function App() {
     resendVerificationCode,
     editUser
   } = useUser();
-  const { markets, connected, exchangeRate } = useMarket();
+  const { markets, connected, exchangeRate, supportedNetworks } = useMarket();
   // Authentication state
   const [registerData, setRegisterData] = useState({
     fullname: "",

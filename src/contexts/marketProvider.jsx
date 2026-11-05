@@ -11,24 +11,43 @@ const MarketContext = createContext();
 export const MarketProvider = ({ children }) => {
     const [markets, setMarkets] = useState([]);
     const [connected, setConnected] = useState(false);
-const [exchangeRate, setExchangeRate] = useState(null);
-const fetchExchangeRate = async () => {
-    try {
-        const response = await fetch(
-            `${backendUrl}/currency/usd-ngn`
-        );
+    const [exchangeRate, setExchangeRate] = useState(null);
+    const [supportedNetworks, setSupportedNetworks] = useState([]);
+    const fetchSupportedNetworks = async () => {
+        try {
+            const response = await fetch(`${backendUrl}/bybit/networks`);
+            const data = await response.json();
 
-        const data = await response.json();
+            if (data.success && Array.isArray(data.data)) {
+                // Convert the array into an object mapping symbols to their networks array
+                const networksMap = {};
+                data.data.forEach((item) => {
+                    networksMap[item.symbol] = item.networks;
+                });
 
-        if (data.success) {
-            setExchangeRate(data.rate);
+                setSupportedNetworks(networksMap);
+            }
+        } catch (error) {
+            console.error("Supported networks fetch error:", error);
         }
-    } catch (error) {
-        console.error("Exchange rate error:", error);
-    }
-};
+    };
+    const fetchExchangeRate = async () => {
+        try {
+            const response = await fetch(
+                `${backendUrl}/currency/usd-ngn`
+            );
 
-fetchExchangeRate();
+            const data = await response.json();
+
+            if (data.success) {
+                setExchangeRate(data.rate);
+            }
+        } catch (error) {
+            console.error("Exchange rate error:", error);
+        }
+    };
+    fetchSupportedNetworks();
+    fetchExchangeRate();
     useEffect(() => {
         const socket = new WebSocket("ws://localhost:8000");
 
@@ -38,35 +57,35 @@ fetchExchangeRate();
         };
 
         socket.onmessage = (event) => {
-    try {
-        const message = JSON.parse(event.data);
+            try {
+                const message = JSON.parse(event.data);
 
-        if (message.type !== "market-update") return;
+                if (message.type !== "market-update") return;
 
-        const ticker = message.data?.data;
+                const ticker = message.data?.data;
 
-        if (!ticker?.symbol) return;
+                if (!ticker?.symbol) return;
 
-        setMarkets((previousMarkets) => {
-            const exists = previousMarkets.some(
-                (item) => item.symbol === ticker.symbol
-            );
+                setMarkets((previousMarkets) => {
+                    const exists = previousMarkets.some(
+                        (item) => item.symbol === ticker.symbol
+                    );
 
-            if (exists) {
-                return previousMarkets.map((item) =>
-                    item.symbol === ticker.symbol
-                        ? { ...item, ...ticker }
-                        : item
-                );
+                    if (exists) {
+                        return previousMarkets.map((item) =>
+                            item.symbol === ticker.symbol
+                                ? { ...item, ...ticker }
+                                : item
+                        );
+                    }
+
+                    return [...previousMarkets, ticker];
+                });
+
+            } catch (error) {
+                console.error("Market update error:", error);
             }
-
-            return [...previousMarkets, ticker];
-        });
-
-    } catch (error) {
-        console.error("Market update error:", error);
-    }
-};
+        };
 
         socket.onclose = () => {
             setConnected(false);
@@ -86,7 +105,8 @@ fetchExchangeRate();
             value={{
                 markets,
                 connected,
-                exchangeRate
+                exchangeRate,
+                supportedNetworks
             }}
         >
             {children}
